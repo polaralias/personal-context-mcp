@@ -1,0 +1,1 @@
+{"version":3,"file":"homeassistant.d.ts","sourceRoot":"","sources":["homeassistant.ts"],"names":[],"mappings":"AAIA,UAAU,QAAQ;IAChB,OAAO,EAAE,MAAM,CAAC;IAChB,KAAK,EAAE,MAAM,CAAC;IACd,QAAQ,EAAE,MAAM,CAAC;CAClB;AAED,qBAAa,sBAAsB;IACjC,OAAO,CAAC,MAAM,CAAW;gBAEb,MAAM,EAAE,QAAQ;IAItB,YAAY;CAgCnB"}
