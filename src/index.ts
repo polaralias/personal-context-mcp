@@ -15,6 +15,8 @@ const swaggerDocument = YAML.load('./openapi.yaml');
 const port = process.env.PORT || 3000;
 const logger = createLogger('server');
 
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(requestLogger);
 
