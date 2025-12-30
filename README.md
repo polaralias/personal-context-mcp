@@ -78,86 +78,100 @@ npm run dev
 
 The server defaults to `http://localhost:3000`.
 
-## Docker / Compose
+## Local Docker Deployment
 
-Build and run the app + Postgres:
+This repository includes a `Dockerfile` and `docker-compose.yml` for easy local deployment.
+
+### Requirements
+
+*   Docker Desktop or Docker Engine
+*   Docker Compose
+
+### Commands
+
+1.  **Start the stack:**
+    ```bash
+    docker compose up --build -d
+    ```
+    This will start the `status-mcp` service on port 3000 and a PostgreSQL database.
+
+2.  **View logs:**
+    ```bash
+    docker compose logs -f
+    ```
+
+3.  **Stop the stack:**
+    ```bash
+    docker compose down
+    ```
+
+### Configuration
+
+You can configure the deployment via environment variables in `docker-compose.yml`.
+
+| Variable | Default (Docker) | Description |
+| :--- | :--- | :--- |
+| `PORT` | `3000` | Port the application listens on inside the container. |
+| `DATABASE_URL` | `postgresql://...` | Connection string for the internal Postgres service. |
+| `AUTH_TOKEN` | - | **Important:** Set this to a strong secret for managing manual overrides. |
+| `HA_URL` | - | URL for Home Assistant integration. |
+| `HA_TOKEN` | - | Long-lived access token for Home Assistant. |
+
+## Reverse Proxy Setup (Nginx Proxy Manager)
+
+This application is designed to work behind a reverse proxy like Nginx Proxy Manager (NPM).
+
+### Setup Steps in NPM
+
+1.  **Add Proxy Host:**
+    *   **Domain Names:** `status.yourdomain.com` (or similar).
+    *   **Scheme:** `http`
+    *   **Forward Hostname / IP:** The IP address of your Docker host (e.g., `192.168.1.100` or `host.docker.internal` if supported).
+    *   **Forward Port:** `3000` (or whatever you mapped in `docker-compose.yml`).
+    *   **Block Common Exploits:** Enable.
+    *   **Websockets Support:** **Enable** (Required for MCP SSE connection).
+
+2.  **SSL:**
+    *   Request a new certificate (Let's Encrypt).
+    *   **Force SSL:** Enable.
+    *   **HTTP/2 Support:** Enable.
+
+### Proxy Headers
+The application is configured to trust proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`). Nginx Proxy Manager handles this automatically by default. This ensures that the application correctly identifies `https` protocol and generates correct redirect URLs during authentication.
+
+## Authentication Flow
+
+The MCP server uses an OAuth-like redirect flow to authenticate clients (like Claude Desktop).
+
+1.  **Initiate Connection:**
+    *   Open the MCP Client (e.g., Claude Desktop).
+    *   Enter the SSE endpoint: `https://status.yourdomain.com/mcp/sse`.
+
+2.  **Redirect to Configuration:**
+    *   The client will open a browser window to `https://status.yourdomain.com/` with a callback URL.
+    *   You will see the "Status MCP Configuration" page.
+
+3.  **Authorize:**
+    *   Click "Connect & Authorize".
+    *   The server generates a secure, short-lived authorization code.
+    *   You are redirected back to the client app (via the custom scheme or localhost callback).
+
+4.  **Token Exchange:**
+    *   The client exchanges the code for a long-lived session token.
+    *   The connection is established.
+
+### Manual API Usage
+
+For manual API calls (e.g., setting status via Curl or Shortcuts), use the `AUTH_TOKEN` set in your environment variables:
 
 ```bash
-docker compose up --build
+curl -X PUT https://status.yourdomain.com/status \
+  -H "Authorization: Bearer YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"working"}'
 ```
-
-Update environment variables in `docker-compose.yml` (or switch to a `.env` file) to include
-`AUTH_TOKEN`, `HA_URL`, `HA_TOKEN`, `HA_ENTITY_ID`, and `GOOGLE_API_KEY`.
 
 ## API docs
 
 - OpenAPI spec: [`openapi.yaml`](./openapi.yaml)
-- Swagger UI: `http://localhost:3000/docs`
-
-## MCP auth flow
-
-The MCP auth flow is implemented in `src/routes/auth.ts` under `/api/auth`.
-
-1. **Authorize**
-
-   `POST /api/auth/authorize`
-
-   ```json
-   {
-     "callbackUrl": "https://client.example.com/callback",
-     "state": "optional-state",
-     "connectionUrl": "https://client.example.com",
-     "config": { "any": "json" }
-   }
-   ```
-
-   Response:
-
-   ```json
-   {
-     "redirectUrl": "https://client.example.com/callback?code=...&state=..."
-   }
-   ```
-
-2. **Token exchange**
-
-   `POST /api/auth/token`
-
-   ```json
-   { "code": "..." }
-   ```
-
-   Response includes a bearer token for protected routes:
-
-   ```json
-   {
-     "access_token": "...",
-     "token_type": "Bearer",
-     "expires_in": 2592000
-   }
-   ```
-
-Use the `access_token` as a `Bearer` token for protected endpoints such as `PUT /status` and `PUT /status/work`.
-
-## /status examples
-
-Get the resolved status:
-
-```bash
-curl http://localhost:3000/status
-```
-
-Override status (requires `AUTH_TOKEN` or a session token):
-
-```bash
-curl -X PUT http://localhost:3000/status \
-  -H "Authorization: Bearer $AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"working","reason":"manual override","ttlSeconds":3600}'
-```
-
-Get work-only status:
-
-```bash
-curl http://localhost:3000/status/work
-```
+- Swagger UI: `http://localhost:3000/docs` (or `https://status.yourdomain.com/docs`)
