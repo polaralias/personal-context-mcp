@@ -2,10 +2,12 @@ import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../db';
 import { StatusResolver } from '../services/resolver';
 import { HolidayService } from '../services/holiday';
+import { createLogger, getRequestId } from '../logger';
 
 const router = Router();
 const resolver = StatusResolver.getInstance();
 const holidayService = HolidayService.getInstance();
+const logger = createLogger('routes:mcp');
 
 // Middleware to check for authentication
 const authenticate = async (req: Request, res: Response, next: NextFunction) => {
@@ -37,7 +39,7 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
         (req as any).userSession = session;
         next();
     } catch (error) {
-        console.error('Auth error:', error);
+        logger.error({ err: error, requestId: getRequestId(req) }, 'auth error');
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -72,8 +74,9 @@ router.get('/sse', authenticate, (req: Request, res: Response) => {
 // POST /messages
 router.post('/messages', authenticate, async (req: Request, res: Response) => {
   const message = req.body;
+  const requestId = getRequestId(req);
 
-  console.log('Received message:', message);
+  logger.info({ requestId, message }, 'received message');
 
   if (message.method === 'initialize') {
       res.json({
@@ -284,7 +287,7 @@ router.post('/messages', authenticate, async (req: Request, res: Response) => {
           });
 
       } catch (error: any) {
-          console.error("Tool call error:", error);
+          logger.error({ err: error, requestId }, 'tool call error');
           res.json({
               jsonrpc: "2.0",
               id: message.id,
