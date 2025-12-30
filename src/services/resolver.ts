@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import prisma from '../db';
 import { HolidayService } from './holiday';
 
 // Types
@@ -30,10 +29,7 @@ export class StatusResolver {
   private holidayService: HolidayService;
 
   private constructor() {
-    const connectionString = `${process.env.DATABASE_URL}`;
-    const pool = new Pool({ connectionString });
-    const adapter = new PrismaPg(pool);
-    this.prisma = new PrismaClient({ adapter });
+    this.prisma = prisma;
     this.holidayService = HolidayService.getInstance();
   }
 

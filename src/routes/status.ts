@@ -1,15 +1,8 @@
 import { Router } from 'express';
 import { StatusResolver } from '../services/resolver';
-import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import prisma from '../db';
 
 const router = Router();
-
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 const resolver = StatusResolver.getInstance();
 

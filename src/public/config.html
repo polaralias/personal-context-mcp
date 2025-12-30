@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configure Status MCP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Status MCP Configuration</h1>
+
+        <div id="loading" class="text-center text-gray-500">
+            Loading...
+        </div>
+
+        <form id="configForm" class="hidden space-y-4">
+            <div>
+                <label for="connectionUrl" class="block text-sm font-medium text-gray-700">Connection URL</label>
+                <input type="url" id="connectionUrl" name="connectionUrl" required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    placeholder="https://your-mcp-server.com/mcp">
+                <p class="text-xs text-gray-500 mt-1">The endpoint that the client should connect to.</p>
+            </div>
+
+            <div>
+                <label for="config" class="block text-sm font-medium text-gray-700">Configuration (JSON)</label>
+                <textarea id="config" name="config" rows="4"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    placeholder='{"apiKey": "..."}'></textarea>
+                <p class="text-xs text-gray-500 mt-1">Optional configuration values for the connection.</p>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Connect & Authorize
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-400 text-center mt-4">
+                Callback: <span id="callbackDomain" class="font-mono text-gray-600"></span>
+            </p>
+        </form>
+
+        <div id="error" class="hidden mt-4 text-center text-red-600 text-sm"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const callbackUrl = params.get('callback_url');
+            const state = params.get('state');
+            const loading = document.getElementById('loading');
+            const form = document.getElementById('configForm');
+            const errorDiv = document.getElementById('error');
+            const callbackDomainSpan = document.getElementById('callbackDomain');
+            const connectionUrlInput = document.getElementById('connectionUrl');
+
+            if (!callbackUrl || !state) {
+                loading.textContent = 'Welcome to Status MCP Server. No configuration session active.';
+                return;
+            }
+
+            try {
+                const url = new URL(callbackUrl);
+                callbackDomainSpan.textContent = url.hostname;
+            } catch (e) {
+                callbackDomainSpan.textContent = 'Invalid URL';
+            }
+
+            // Default connection URL to current origin + /mcp/sse
+            connectionUrlInput.value = window.location.origin + '/mcp/sse';
+
+            loading.classList.add('hidden');
+            form.classList.remove('hidden');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorDiv.classList.add('hidden');
+
+                const connectionUrl = document.getElementById('connectionUrl').value;
+                const configText = document.getElementById('config').value;
+                let config = {};
+
+                if (configText) {
+                    try {
+                        config = JSON.parse(configText);
+                    } catch (err) {
+                        errorDiv.textContent = 'Invalid JSON in Configuration';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                }
+
+                try {
+                    const response = await fetch('/api/auth/authorize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            callbackUrl,
+                            state,
+                            connectionUrl,
+                            config
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Authorization failed');
+                    }
+
+                    if (data.redirectUrl) {
+                        window.location.href = data.redirectUrl;
+                    } else {
+                        throw new Error('No redirect URL returned');
+                    }
+                } catch (err) {
+                    errorDiv.textContent = err.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
