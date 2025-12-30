@@ -55,6 +55,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /status/work:
+    get:
+      summary: Get current work status
+      responses:
+        '200':
+          description: Current work status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkStatusResponse'
+    put:
+      summary: Set manual work status override
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workStatus:
+                  type: string
+                reason:
+                  type: string
+                ttlSeconds:
+                  type: integer
+      responses:
+        '200':
+          description: Updated work status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkStatusResponse'
+  /status/work/date/{date}:
+    get:
+      summary: Get work status for a specific date
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Work status for date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkStatusResponse'
+  /status/location:
+    get:
+      summary: Get current location
+      responses:
+        '200':
+          description: Current resolved location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+    put:
+      summary: Set manual location override
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+                locationName:
+                  type: string
+                source:
+                  type: string
+                ttlSeconds:
+                  type: integer
+      responses:
+        '200':
+          description: Updated location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+  /status/location/history:
+    get:
+      summary: Get location history
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Location history list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationHistoryResponse'
   /status/schedule:
     get:
       summary: Get scheduled overrides
@@ -110,6 +220,27 @@ components:
           $ref: '#/components/schemas/Location'
         lastUpdated:
           type: string
+    WorkStatusResponse:
+      type: object
+      properties:
+        workStatus:
+          type: string
+        effectiveDate:
+          type: string
+    LocationResponse:
+      type: object
+      properties:
+        location:
+          $ref: '#/components/schemas/Location'
+        effectiveDate:
+          type: string
+    LocationHistoryResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
     Location:
       type: object
       properties:
