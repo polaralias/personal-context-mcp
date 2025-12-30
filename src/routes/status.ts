@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { StatusResolver } from '../services/resolver';
 import prisma from '../db';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -67,7 +68,7 @@ router.get('/date/:date', async (req, res) => {
 });
 
 // PUT /status/schedule
-router.put('/schedule', async (req, res) => {
+router.put('/schedule', authenticate, async (req, res) => {
   try {
       const { date, ...patch } = req.body;
       if (!date) {
@@ -107,6 +108,27 @@ router.get('/schedule', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
+});
+
+// DELETE /status/schedule/:date
+router.delete('/schedule/:date', authenticate, async (req, res) => {
+  const date = req.params.date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+  }
+
+  try {
+    await prisma.scheduledStatus.delete({
+      where: { date }
+    });
+    res.json({ message: 'Scheduled status deleted' });
+  } catch (error) {
+    // Check if error is "Record to delete does not exist"
+    // P2025 is Prisma's error code for this.
+    // For now generic error handling:
+    console.error('Error deleting scheduled status:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 export default router;
