@@ -43,6 +43,11 @@ export class StatusResolver {
   async resolveStatus(date: Date = new Date()): Promise<Status> {
     const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const resolvedAt = new Date().toISOString();
+    const now = new Date();
+    const locationStaleHours = Number(process.env.LOCATION_STALE_HOURS ?? 6);
+    const locationStaleMs = Number.isFinite(locationStaleHours) && locationStaleHours > 0
+      ? locationStaleHours * 60 * 60 * 1000
+      : 6 * 60 * 60 * 1000;
 
     // 1. Determine Temporal State
     const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
@@ -50,7 +55,7 @@ export class StatusResolver {
     const isBankHoliday = await this.holidayService.isBankHoliday(date);
 
     // 2. Fetch Base Status (Latest VALID event)
-    const baseWorkEvent = await this.findLatestValidWorkEvent(new Date());
+    const baseWorkEvent = await this.findLatestValidWorkEvent(now);
 
     const latestLocationEvent = await this.prisma.locationEvent.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -76,7 +81,7 @@ export class StatusResolver {
     }
 
     // 5. Check for "Now" Overrides (TTL) - ONLY if resolving for TODAY
-    const isToday = dateString === new Date().toISOString().split('T')[0];
+    const isToday = dateString === now.toISOString().split('T')[0];
 
     if (isToday) {
          // Re-fetch latest work event to check for active overrides.
@@ -97,7 +102,7 @@ export class StatusResolver {
              orderBy: { createdAt: 'desc' }
          });
 
-         if (latestEvent && latestEvent.expiresAt && latestEvent.expiresAt > new Date()) {
+         if (latestEvent && latestEvent.expiresAt && latestEvent.expiresAt > now) {
              workStatus = latestEvent.status;
          }
     }
@@ -105,6 +110,13 @@ export class StatusResolver {
     // Resolve Location
     let location: Location | null = null;
     if (latestLocationEvent) {
+        const isExpired = latestLocationEvent.expiresAt
+          ? latestLocationEvent.expiresAt <= now
+          : false;
+        const isStale = now.getTime() - latestLocationEvent.createdAt.getTime() > locationStaleMs;
+        if (isExpired || isStale) {
+          location = null;
+        } else {
         location = {
             latitude: latestLocationEvent.latitude,
             longitude: latestLocationEvent.longitude,
@@ -112,6 +124,7 @@ export class StatusResolver {
             source: latestLocationEvent.source,
             timestamp: latestLocationEvent.createdAt.toISOString()
         };
+        }
     }
 
     return {

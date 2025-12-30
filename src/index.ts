@@ -6,12 +6,15 @@ import statusRoutes from './routes/status';
 import mcpRoutes from './routes/mcp';
 import authRoutes from './routes/auth';
 import { startJobs } from './jobs';
+import prisma from './db';
+import { requestLogger } from './middleware/logger';
 
 const app = express();
 const swaggerDocument = YAML.load('./openapi.yaml');
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(requestLogger);
 
 // Serve static UI
 app.use(express.static(path.join(__dirname, 'public')));
@@ -28,8 +31,14 @@ app.use('/api/auth', authRoutes);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health
-app.get('/healthz', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/healthz', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ status: 'error', db: 'unavailable', timestamp: new Date().toISOString() });
+  }
 });
 
 if (require.main === module) {
