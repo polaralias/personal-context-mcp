@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { StatusResolver } from '../services/resolver';
 import prisma from '../db';
 import { authenticate } from '../middleware/auth';
+import { createLogger, getRequestId } from '../logger';
 
 const router = Router();
 
 const resolver = StatusResolver.getInstance();
+const logger = createLogger('routes:status');
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
@@ -98,7 +100,7 @@ router.get('/', async (req, res) => {
     const status = await resolver.resolveStatus();
     res.json(status);
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch status');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -130,7 +132,7 @@ router.put('/', authenticate, async (req, res) => {
     const resolved = await resolver.resolveStatus();
     res.json(resolved);
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to set status override');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -148,7 +150,7 @@ router.get('/date/:date', async (req, res) => {
     const status = await resolver.resolveStatus(date);
     res.json(status);
   } catch (error) {
-     console.error(error);
+     logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch status by date');
      res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -159,7 +161,7 @@ router.get('/work', async (req, res) => {
     const status = await resolver.resolveStatus();
     res.json({ workStatus: status.workStatus, effectiveDate: status.effectiveDate });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch work status');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -190,7 +192,7 @@ router.put('/work', authenticate, async (req, res) => {
     const status = await resolver.resolveStatus();
     res.json({ workStatus: status.workStatus, effectiveDate: status.effectiveDate });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to set work status');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -208,7 +210,7 @@ router.get('/work/date/:date', async (req, res) => {
     const status = await resolver.resolveStatus(date);
     res.json({ workStatus: status.workStatus, effectiveDate: status.effectiveDate });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch work status by date');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -240,7 +242,7 @@ router.put('/location', authenticate, async (req, res) => {
     const status = await resolver.resolveStatus();
     res.json({ location: status.location, effectiveDate: status.effectiveDate });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to update location');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -251,7 +253,7 @@ router.get('/location', async (req, res) => {
     const status = await resolver.resolveStatus();
     res.json({ location: status.location, effectiveDate: status.effectiveDate });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch location');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -303,7 +305,7 @@ router.get('/location/history', async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch location history');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -336,7 +338,7 @@ router.put('/schedule', authenticate, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to upsert schedule');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -357,7 +359,7 @@ router.get('/schedule', async (req, res) => {
         });
         res.json(schedules);
     } catch (error) {
-        console.error(error);
+        logger.error({ err: error, requestId: getRequestId(req) }, 'failed to fetch schedules');
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
@@ -378,7 +380,7 @@ router.delete('/schedule/:date', authenticate, async (req, res) => {
     // Check if error is "Record to delete does not exist"
     // P2025 is Prisma's error code for this.
     // For now generic error handling:
-    console.error('Error deleting scheduled status:', error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'error deleting scheduled status');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

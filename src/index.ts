@@ -8,10 +8,12 @@ import authRoutes from './routes/auth';
 import { startJobs } from './jobs';
 import prisma from './db';
 import { requestLogger } from './middleware/logger';
+import { createLogger, getRequestId } from './logger';
 
 const app = express();
 const swaggerDocument = YAML.load('./openapi.yaml');
 const port = process.env.PORT || 3000;
+const logger = createLogger('server');
 
 app.use(express.json());
 app.use(requestLogger);
@@ -36,14 +38,14 @@ app.get('/healthz', async (req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
   } catch (error) {
-    console.error('Health check failed:', error);
+    logger.error({ err: error, requestId: getRequestId(req) }, 'health check failed');
     res.status(503).json({ status: 'error', db: 'unavailable', timestamp: new Date().toISOString() });
   }
 });
 
 if (require.main === module) {
   app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+    logger.info({ port }, 'server started');
     startJobs();
   });
 }

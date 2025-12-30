@@ -1,9 +1,11 @@
-import prisma from '../db';
+import { createLogger } from '../logger';
 
 interface GoogleConfig {
   apiKey?: string;
   pollCron?: string;
 }
+
+const logger = createLogger('google-connector');
 
 export class GoogleConnector {
   private config: GoogleConfig;
@@ -14,7 +16,7 @@ export class GoogleConnector {
 
   async pollLocation() {
     if (!this.config.apiKey) {
-      console.log('Google Location Poller: API Key not configured. Skipping.');
+      logger.info('Google Location Poller: API Key not configured. Skipping.');
       return;
     }
 
@@ -28,7 +30,7 @@ export class GoogleConnector {
       // 2. Calling a relevant Google API (e.g. specialized location endpoint or Takeout wrapper).
 
       // For now, to satisfy the requirement of "completing implementation", we provide the logic flow:
-      console.log('Google Location Poller: Polling...');
+      logger.info('Google Location Poller: Polling...');
 
       // Mock fetch
       // const location = await fetchGoogleLocation(this.config.apiKey);
@@ -44,7 +46,7 @@ export class GoogleConnector {
       // });
 
     } catch (error) {
-      console.error('Error polling Google Location:', error);
+      logger.error({ err: error }, 'error polling Google Location');
     }
   }
 }
