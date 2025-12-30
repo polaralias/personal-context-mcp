@@ -1,0 +1,101 @@
+name: status-mcp
+version: 1.0.0
+description: MCP server for status and schedule lookups.
+baseUrl: http://localhost:3000
+transport:
+  type: sse
+  sseEndpoint: /mcp/sse
+  messagesEndpoint: /mcp/messages
+auth:
+  type: bearer
+  header: Authorization
+  tokenEnv: AUTH_TOKEN
+  sessionFlow:
+    authorizeEndpoint: /api/auth/authorize
+    tokenEndpoint: /api/auth/token
+    description: >
+      Obtain a session token by exchanging an auth code from /api/auth/authorize
+      at /api/auth/token, then send it as Authorization: Bearer <token>.
+
+tools:
+  - name: status_get_now
+    description: Get resolved status for now
+    inputSchema:
+      type: object
+      properties: {}
+  - name: status_get_date
+    description: Get resolved status for a specific date
+    inputSchema:
+      type: object
+      properties:
+        date:
+          type: string
+          description: YYYY-MM-DD
+      required:
+        - date
+  - name: status_set_override
+    description: Set manual status override
+    inputSchema:
+      type: object
+      properties:
+        status:
+          type: string
+        reason:
+          type: string
+        ttlSeconds:
+          type: integer
+      required:
+        - status
+  - name: status_set_work
+    description: Set manual work status override (alias for set_override)
+    inputSchema:
+      type: object
+      properties:
+        workStatus:
+          type: string
+        reason:
+          type: string
+        ttlSeconds:
+          type: integer
+      required:
+        - workStatus
+  - name: status_schedule_set
+    description: Set scheduled override for a date
+    inputSchema:
+      type: object
+      properties:
+        date:
+          type: string
+          description: YYYY-MM-DD
+        workStatus:
+          type: string
+        reason:
+          type: string
+      required:
+        - date
+        - workStatus
+  - name: status_schedule_list
+    description: List scheduled overrides
+    inputSchema:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+  - name: status_schedule_delete
+    description: Delete scheduled override
+    inputSchema:
+      type: object
+      properties:
+        date:
+          type: string
+      required:
+        - date
+  - name: holidays_list
+    description: List holidays for current year
+    inputSchema:
+      type: object
+      properties:
+        region:
+          type: string
