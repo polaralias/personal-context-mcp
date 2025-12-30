@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import prisma from '../db';
 
 const GOV_UK_HOLIDAYS_URL = 'https://www.gov.uk/bank-holidays.json';
 
@@ -25,10 +24,7 @@ export class HolidayService {
   private prisma: PrismaClient;
 
   private constructor() {
-    const connectionString = `${process.env.DATABASE_URL}`;
-    const pool = new Pool({ connectionString });
-    const adapter = new PrismaPg(pool);
-    this.prisma = new PrismaClient({ adapter });
+    this.prisma = prisma;
   }
 
   public static getInstance(): HolidayService {
