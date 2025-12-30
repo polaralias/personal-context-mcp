@@ -49,22 +49,18 @@ export class StatusResolver {
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isBankHoliday = await this.holidayService.isBankHoliday(date);
 
-    // 2. Fetch Base Status (Latest events)
-    const latestWorkEvent = await this.prisma.workStatusEvent.findFirst({
-      orderBy: { createdAt: 'desc' },
-    });
+    // 2. Fetch Base Status (Latest VALID event)
+    const baseWorkEvent = await this.findLatestValidWorkEvent(new Date());
 
     const latestLocationEvent = await this.prisma.locationEvent.findFirst({
       orderBy: { createdAt: 'desc' },
     });
 
     // 3. Apply Defaults
-    let workStatus: WorkStatus = latestWorkEvent?.status || 'off';
+    let workStatus: WorkStatus = baseWorkEvent?.status || 'off';
 
     if (isWeekend || isBankHoliday) {
       workStatus = 'off';
-    } else {
-        workStatus = latestWorkEvent?.status || 'off';
     }
 
     // 4. Check for Scheduled Overrides (Exact Date)
@@ -83,8 +79,26 @@ export class StatusResolver {
     const isToday = dateString === new Date().toISOString().split('T')[0];
 
     if (isToday) {
-         if (latestWorkEvent && latestWorkEvent.expiresAt && latestWorkEvent.expiresAt > new Date()) {
-             workStatus = latestWorkEvent.status;
+         // Re-fetch latest work event to check for active overrides.
+         // Specifically, if there is a newer event than our "valid base" that is active now, use it.
+         // Actually, findLatestValidWorkEvent already returns the latest active event.
+         // The only edge case is if we are resolving for TODAY, and there is an event that expires LATER today,
+         // it should be picked up by findLatestValidWorkEvent.
+
+         // However, the requirement is "For “now” resolution, also apply “active” TTL-based overrides".
+         // This implies that even if step 3 or 4 set something, an active TTL override might supercede?
+         // But usually overrides are for "now".
+
+         // If I set "working" for today (Scheduled), but then I manually set "lunch" (1h TTL).
+         // Step 4 sets "working".
+         // Step 5 should check if there's an active manual override that trumps the schedule.
+
+         const latestEvent = await this.prisma.workStatusEvent.findFirst({
+             orderBy: { createdAt: 'desc' }
+         });
+
+         if (latestEvent && latestEvent.expiresAt && latestEvent.expiresAt > new Date()) {
+             workStatus = latestEvent.status;
          }
     }
 
@@ -107,7 +121,20 @@ export class StatusResolver {
       weekend: isWeekend,
       workStatus,
       location,
-      lastUpdated: latestWorkEvent?.createdAt.toISOString() || resolvedAt // Fallback
+      lastUpdated: baseWorkEvent?.createdAt.toISOString() || resolvedAt // Fallback
     } as Status;
+  }
+
+  // Find the latest event that is either permanent (no expiresAt) OR not yet expired.
+  private async findLatestValidWorkEvent(now: Date) {
+      return this.prisma.workStatusEvent.findFirst({
+          where: {
+              OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gt: now } }
+              ]
+          },
+          orderBy: { createdAt: 'desc' }
+      });
   }
 }

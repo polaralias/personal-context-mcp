@@ -53,3 +53,26 @@ model BankHolidayCache {
   @@unique([region, year])
   @@map("bank_holidays_cache")
 }
+
+model ClientSession {
+  id            Int      @id @default(autoincrement())
+  token         String   @unique
+  connectionUrl String?  @map("connection_url")
+  config        Json?
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("client_sessions")
+}
+
+model AuthCode {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  callbackUrl  String   @map("callback_url")
+  state        String?
+  sessionToken String   @map("session_token")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("auth_codes")
+}
