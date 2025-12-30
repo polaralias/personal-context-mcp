@@ -3,6 +3,9 @@ import { HomeAssistantConnector } from './connectors/homeassistant';
 import { GoogleConnector } from './connectors/google';
 import { HolidayService } from './services/holiday';
 import prisma from './db';
+import { createLogger } from './logger';
+
+const logger = createLogger('jobs');
 
 const haConnector = new HomeAssistantConnector({
     baseUrl: process.env.HA_URL || '',
@@ -21,7 +24,7 @@ export function startJobs() {
     // Poll Home Assistant every 15 minutes
     cron.schedule('*/15 * * * *', () => {
         if (process.env.HA_URL) {
-            console.log('Polling Home Assistant...');
+            logger.info('polling Home Assistant');
             haConnector.pollLocation();
         }
     });
@@ -32,19 +35,19 @@ export function startJobs() {
     const googleCron = process.env.GOOGLE_POLL_CRON || '0 * * * *';
     cron.schedule(googleCron, () => {
          // Google Connector has its own check for apiKey presence
-         console.log('Polling Google Location...');
+         logger.info('polling Google Location');
          googleConnector.pollLocation();
     });
 
     // Refresh Holidays daily at 2am
     cron.schedule('0 2 * * *', () => {
-        console.log('Refreshing holidays...');
+        logger.info('refreshing holidays');
         holidayService.fetchHolidays();
     });
 
     // Data Cleanup Job: Runs daily at 3am
     cron.schedule('0 3 * * *', async () => {
-        console.log('Running data cleanup...');
+        logger.info('running data cleanup');
         try {
             const daysToKeep = 90;
             const cutoffDate = new Date();
@@ -66,11 +69,15 @@ export function startJobs() {
                 }
             });
 
-            console.log(`Data cleanup complete. Deleted ${deletedWork.count} work events and ${deletedLocation.count} location events older than ${daysToKeep} days.`);
+            logger.info({
+                deletedWork: deletedWork.count,
+                deletedLocation: deletedLocation.count,
+                daysToKeep
+            }, 'data cleanup complete');
         } catch (error) {
-            console.error('Error during data cleanup:', error);
+            logger.error({ err: error }, 'error during data cleanup');
         }
     });
 
-    console.log('Background jobs started');
+    logger.info('background jobs started');
 }

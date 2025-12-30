@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../db';
+import { createLogger, getRequestId } from '../logger';
 
 const router = Router();
+const logger = createLogger('routes:auth');
 
 // POST /authorize
 router.post('/authorize', async (req: Request, res: Response) => {
@@ -53,7 +55,7 @@ router.post('/authorize', async (req: Request, res: Response) => {
         res.json({ redirectUrl: redirectUrl.toString() });
 
     } catch (error) {
-        console.error(error);
+        logger.error({ err: error, requestId: getRequestId(req) }, 'authorize failed');
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
@@ -93,7 +95,7 @@ router.post('/token', async (req: Request, res: Response) => {
         });
 
     } catch (error) {
-        console.error(error);
+        logger.error({ err: error, requestId: getRequestId(req) }, 'token exchange failed');
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });

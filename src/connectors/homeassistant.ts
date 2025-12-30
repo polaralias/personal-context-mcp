@@ -1,10 +1,13 @@
 import prisma from '../db';
+import { createLogger } from '../logger';
 
 interface HAConfig {
   baseUrl: string;
   token: string;
   entityId: string;
 }
+
+const logger = createLogger('homeassistant-connector');
 
 export class HomeAssistantConnector {
   private config: HAConfig;
@@ -42,7 +45,7 @@ export class HomeAssistantConnector {
       }
 
     } catch (error) {
-      console.error('Error polling Home Assistant:', error);
+      logger.error({ err: error }, 'error polling Home Assistant');
     }
   }
 }
