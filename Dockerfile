@@ -28,7 +28,7 @@ RUN npm install --production
 COPY --from=builder /app/dist ./dist
 # Copy OpenAPI spec if needed at runtime
 COPY openapi.yaml ./
-COPY public ./public
+COPY src/public ./dist/public
 
 # Generate Prisma Client for the production environment
 RUN npx prisma generate
