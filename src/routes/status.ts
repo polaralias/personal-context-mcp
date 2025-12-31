@@ -3,6 +3,7 @@ import { StatusResolver } from '../services/resolver';
 import prisma from '../db';
 import { authenticate } from '../middleware/auth';
 import { createLogger, getRequestId } from '../logger';
+import { toInputJsonObject } from '../utils/prismaJson';
 
 const router = Router();
 
@@ -319,16 +320,18 @@ router.put('/schedule', authenticate, async (req, res) => {
     }
 
     const { date, workStatus, location, reason } = req.body;
-    const patch: Record<string, unknown> = {};
+    const patchData: Record<string, unknown> = {};
     if (workStatus) {
-      patch.workStatus = workStatus;
+      patchData.workStatus = workStatus;
     }
     if (location) {
-      patch.location = location;
+      patchData.location = location;
     }
     if (reason) {
-      patch.reason = reason;
+      patchData.reason = reason;
     }
+
+    const patch = toInputJsonObject(patchData);
 
     await prisma.scheduledStatus.upsert({
       where: { date },
