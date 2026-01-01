@@ -21,6 +21,10 @@ Create a `.env` file (or export env vars directly):
 
 ```bash
 DATABASE_URL=postgresql://postgres:password@localhost:5432/status_db
+# Optional: Bearer token for MCP endpoint protection. If unset, the MCP endpoint is open.
+MCP_BEARER_TOKEN=replace-with-a-token
+
+# REST API protection (status/work, etc)
 AUTH_TOKEN=replace-with-a-strong-token
 
 # Home Assistant connector
@@ -45,13 +49,14 @@ ENABLE_LEGACY_SSE=false
 | Variable | Required For | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | All runtime | Used by Prisma in `src/db.ts`. |
-| `AUTH_TOKEN` | Protected routes (manual overrides) | Used by `src/middleware/auth.ts`; if unset, only DB session tokens work. |
+| `AUTH_TOKEN` | Protected REST routes | Used by `src/middleware/auth.ts`. |
 | `HA_URL` | Home Assistant polling | Required to enable HA polling in `src/jobs.ts`. |
 | `HA_TOKEN` | Home Assistant polling | Required with `HA_URL` in `src/jobs.ts`/`src/connectors/homeassistant.ts`. |
 | `GOOGLE_API_KEY` | Google connector polling | Required to enable polling in `src/jobs.ts`/`src/connectors/google.ts`. |
 
 **Related env vars** (optional but commonly used)
 
+- `MCP_BEARER_TOKEN`: If set, requires `Authorization: Bearer <token>` for `/mcp` access.
 - `HA_ENTITY_ID`: entity to read in Home Assistant (used by `HomeAssistantConnector`).
 - `GOOGLE_POLL_CRON`: cron schedule for Google polling (defaults to hourly).
 - `PORT`: server port (default `3000`).
@@ -117,7 +122,7 @@ You can configure the deployment via environment variables in `docker-compose.ym
 | :--- | :--- | :--- |
 | `PORT` | `3000` | Port the application listens on inside the container. |
 | `DATABASE_URL` | `postgresql://...` | Connection string for the internal Postgres service. |
-| `AUTH_TOKEN` | - | **Important:** Set this to a strong secret for managing manual overrides. |
+| `AUTH_TOKEN` | - | **Important:** Set this to a strong secret for managing REST API access. |
 | `HA_URL` | - | URL for Home Assistant integration. |
 | `HA_TOKEN` | - | Long-lived access token for Home Assistant. |
 
@@ -152,26 +157,20 @@ This server supports the MCP Streamable HTTP transport at `/mcp`.
 
 ### Authentication Flow
 
-The MCP server uses an OAuth-like redirect flow to authenticate clients (like Claude Desktop).
+This server exposes a single MCP endpoint over Streamable HTTP.
 
 1.  **Initiate Connection:**
     *   Open the MCP Client (e.g., Claude Desktop).
     *   Enter the MCP endpoint: `https://status.yourdomain.com/mcp` (or `http://localhost:3000/mcp`).
 
-2.  **Redirect to Configuration:**
-    *   The client will open a browser window to `https://status.yourdomain.com/` with a callback URL.
-    *   You will see the "Status MCP Configuration" page.
+To connect via an MCP Client (e.g., Claude Desktop, Cursor), configure it to point to this URL.
 
-3.  **Authorize:**
-    *   Click "Connect & Authorize".
-    *   The server generates a secure, short-lived authorization code.
-    *   You are redirected back to the client app (via the custom scheme or localhost callback).
+If `MCP_BEARER_TOKEN` is set, ensure the client sends the `Authorization` header.
 
-4.  **Token Exchange:**
-    *   The client exchanges the code for a long-lived session token.
-    *   The connection is established.
+### Old SSE Transport
+The previous SSE transport at `/mcp/sse` and `/mcp/messages` has been removed in favor of the official MCP Streamable HTTP transport at `/mcp`.
 
-### Manual API Usage
+## REST API usage
 
 For manual API calls (e.g., setting status via Curl or Shortcuts), use the `AUTH_TOKEN` set in your environment variables:
 
