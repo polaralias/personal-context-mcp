@@ -132,9 +132,6 @@ To connect via an MCP Client (e.g., Claude Desktop, Cursor), configure it to poi
 
 If `MCP_BEARER_TOKEN` is set, ensure the client sends the `Authorization` header.
 
-### Old SSE Transport
-The previous SSE transport at `/mcp/sse` and `/mcp/messages` has been removed in favor of the official MCP Streamable HTTP transport at `/mcp`.
-
 ## REST API usage
 
 For manual API calls (e.g., setting status via Curl or Shortcuts), use the `AUTH_TOKEN` set in your environment variables:
