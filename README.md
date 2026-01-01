@@ -35,6 +35,9 @@ GOOGLE_POLL_CRON=0 * * * *
 # Optional runtime
 PORT=3000
 LOCATION_STALE_HOURS=6
+
+# Legacy MCP Routes (SSE + JSON-RPC)
+ENABLE_LEGACY_SSE=false
 ```
 
 **Required env vars**
@@ -53,6 +56,7 @@ LOCATION_STALE_HOURS=6
 - `GOOGLE_POLL_CRON`: cron schedule for Google polling (defaults to hourly).
 - `PORT`: server port (default `3000`).
 - `LOCATION_STALE_HOURS`: resolver staleness window.
+- `ENABLE_LEGACY_SSE`: Set to `true` to enable legacy `/mcp/sse` and `/mcp/messages` endpoints.
 
 ### Database + Prisma
 
@@ -139,13 +143,20 @@ This application is designed to work behind a reverse proxy like Nginx Proxy Man
 ### Proxy Headers
 The application is configured to trust proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`). Nginx Proxy Manager handles this automatically by default. This ensures that the application correctly identifies `https` protocol and generates correct redirect URLs during authentication.
 
-## Authentication Flow
+## MCP Connection
+
+This server supports the MCP Streamable HTTP transport at `/mcp`.
+
+1.  **Endpoint:** `http(s)://<host>/mcp`
+2.  **Authentication:** Requires `Authorization: Bearer <token>` header.
+
+### Authentication Flow
 
 The MCP server uses an OAuth-like redirect flow to authenticate clients (like Claude Desktop).
 
 1.  **Initiate Connection:**
     *   Open the MCP Client (e.g., Claude Desktop).
-    *   Enter the SSE endpoint: `https://status.yourdomain.com/mcp/sse`.
+    *   Enter the MCP endpoint: `https://status.yourdomain.com/mcp` (or `http://localhost:3000/mcp`).
 
 2.  **Redirect to Configuration:**
     *   The client will open a browser window to `https://status.yourdomain.com/` with a callback URL.
