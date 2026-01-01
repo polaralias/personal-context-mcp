@@ -5,6 +5,8 @@ import path from 'path';
 import statusRoutes from './routes/status';
 import mcpRoutes from './routes/mcp';
 import authRoutes from './routes/auth';
+import { handleMcpRequest } from './server/mcp';
+import { authenticate } from './middleware/auth';
 import { startJobs } from './jobs';
 import prisma from './db';
 import { requestLogger } from './middleware/logger';
@@ -28,7 +30,15 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/status', statusRoutes);
-app.use('/mcp', mcpRoutes);
+
+// New MCP Streamable HTTP endpoint
+app.all('/mcp', authenticate, handleMcpRequest);
+
+// Legacy MCP Routes (SSE + JSON-RPC)
+if (process.env.ENABLE_LEGACY_SSE === 'true') {
+  app.use('/mcp', mcpRoutes);
+}
+
 app.use('/api/auth', authRoutes);
 
 // Docs

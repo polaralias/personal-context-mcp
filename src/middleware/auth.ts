@@ -12,6 +12,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   // 1. Check Environment Master Token
   if (process.env.AUTH_TOKEN && token === process.env.AUTH_TOKEN) {
+    (req as any).userSession = { type: 'master' };
     return next();
   }
 
@@ -26,6 +27,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       if (session.expiresAt && session.expiresAt < new Date()) {
         return res.status(401).json({ error: 'Unauthorized: Token expired' });
       }
+      (req as any).userSession = session;
       return next();
     }
   } catch (error) {
