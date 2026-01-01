@@ -44,7 +44,9 @@ vi.mock('@prisma/adapter-pg', () => {
 // 5. Mock PrismaClient
 vi.mock('@prisma/client', () => {
   return {
-    PrismaClient: class {},
+    PrismaClient: class {
+      $queryRaw = vi.fn().mockResolvedValue([1]);
+    },
   };
 });
 
