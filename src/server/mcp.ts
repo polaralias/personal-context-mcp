@@ -6,11 +6,27 @@ import { StatusResolver } from '../services/resolver';
 import { HolidayService } from '../services/holiday';
 import { TrackerService } from '../services/tracker';
 import { createLogger, getRequestId } from '../logger';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomUUID } from 'node:crypto';
 
 const logger = createLogger('server:mcp');
 const resolver = StatusResolver.getInstance();
 const holidayService = HolidayService.getInstance();
 const tracker = TrackerService.getInstance();
+
+export const mcpContextStorage = new AsyncLocalStorage<any>();
+
+export function getMcpContext() {
+    return mcpContextStorage.getStore();
+}
+
+const sessionMap = new Map<string, StreamableHTTPServerTransport>();
+
+interface ExtendedTransport extends StreamableHTTPServerTransport {
+    sessionIdGenerator?: () => string;
+    onsessioninitialized?: (id: string) => void;
+    onsessionclosed?: (id: string) => void;
+}
 
 // Create MCP Server
 export const mcpServer = new McpServer({
@@ -266,16 +282,51 @@ mcpServer.tool(
 export const handleMcpRequest = async (req: Request, res: Response) => {
     logger.info({ method: req.method, url: req.url }, "Handling MCP request");
 
-    // Pass config if available
-    // Note: The SDK does not currently support passing context easily to global tools.
-    // In a real implementation where tools depend on config, we would need to restructure tool registration.
-    // For this task, we've ensured the config is available on the request object.
-
     try {
-        const transport = new StreamableHTTPServerTransport();
-        await mcpServer.connect(transport);
-        logger.debug("MCP server connected to transport");
-        await transport.handleRequest(req, res, req.body);
+        if (!req.headers.accept || req.headers.accept === '*/*') {
+            req.headers.accept = 'application/json, text/event-stream';
+        }
+
+        let transport: StreamableHTTPServerTransport;
+        const sessionId = req.headers['mcp-session-id'] as string;
+
+        if (sessionId && sessionMap.has(sessionId)) {
+            transport = sessionMap.get(sessionId)!;
+            logger.debug({ sessionId }, "Reusing existing MCP session");
+        } else {
+            transport = new StreamableHTTPServerTransport();
+            const t = transport as unknown as ExtendedTransport;
+
+            let currentSessionId: string | null = null;
+
+            t.sessionIdGenerator = () => randomUUID();
+
+            t.onsessioninitialized = (id: string) => {
+                currentSessionId = id;
+                logger.info({ sessionId: id }, "MCP Session initialized");
+                sessionMap.set(id, transport);
+            };
+
+            t.onsessionclosed = (id: string) => {
+                logger.info({ sessionId: id }, "MCP Session closed");
+                sessionMap.delete(id);
+            };
+
+            t.onclose = () => {
+                 if (currentSessionId && sessionMap.has(currentSessionId)) {
+                     logger.info({ sessionId: currentSessionId }, "MCP Session closed (defensive cleanup)");
+                     sessionMap.delete(currentSessionId);
+                 }
+            };
+
+            await mcpServer.connect(transport);
+            logger.debug("Created new MCP transport and connected");
+        }
+
+        await mcpContextStorage.run(req.mcpConfig, async () => {
+            await transport.handleRequest(req, res, req.body);
+        });
+
     } catch (err) {
         logger.error({ err, requestId: getRequestId(req) }, "MCP Transport error");
         if (!res.headersSent) {

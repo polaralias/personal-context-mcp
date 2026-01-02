@@ -23,8 +23,8 @@ Create a `.env` file (or export env vars directly):
 DATABASE_URL=postgresql://postgres:password@localhost:5432/status_db
 
 # Auth Configuration (REQUIRED for Connect Flow)
-MASTER_KEY=change-this-to-at-least-32-byte-random-string
-REDIRECT_URI_ALLOWLIST=http://localhost:8080/callback
+MASTER_KEY=CHANGE_THIS_TO_A_32_BYTE_RANDOM_STRING_FOR_ENCRYPTION_AND_SIGNING
+REDIRECT_URI_ALLOWLIST=http://localhost:8080/callback,https://myapp.com/callback
 
 # Google connector
 GOOGLE_API_KEY=replace-with-google-api-key
