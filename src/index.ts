@@ -3,10 +3,9 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import path from 'path';
 import statusRoutes from './routes/status';
-import mcpRoutes from './routes/mcp';
 import authRoutes from './routes/auth';
 import { handleMcpRequest } from './server/mcp';
-import { authenticate } from './middleware/auth';
+import { authenticateMcp } from './middleware/mcpAuth';
 import { startJobs } from './jobs';
 import prisma from './db';
 import { requestLogger } from './middleware/logger';
@@ -31,13 +30,8 @@ app.get('/', (_req, res) => {
 // API Routes
 app.use('/status', statusRoutes);
 
-// New MCP Streamable HTTP endpoint
-app.all('/mcp', authenticate, handleMcpRequest);
-
-// Legacy MCP Routes (SSE + JSON-RPC)
-if (process.env.ENABLE_LEGACY_SSE === 'true') {
-  app.use('/mcp', mcpRoutes);
-}
+// MCP Streamable HTTP endpoint
+app.all('/mcp', authenticateMcp, handleMcpRequest);
 
 app.use('/api/auth', authRoutes);
 

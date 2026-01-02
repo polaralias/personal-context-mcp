@@ -22,7 +22,7 @@ mcpServer.tool(
     "status_get_now",
     "Get resolved status for now",
     {},
-    async (args, extra) => {
+    async (_args, _extra) => {
         const result = await resolver.resolveStatus();
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
@@ -36,7 +36,7 @@ mcpServer.tool(
     {
         date: z.string().describe("YYYY-MM-DD")
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         const result = await resolver.resolveStatus(new Date(args.date));
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
@@ -52,7 +52,7 @@ mcpServer.tool(
         reason: z.string().optional(),
         ttlSeconds: z.number().int().optional()
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         let expiresAt = undefined;
         if (args.ttlSeconds) {
             expiresAt = new Date(Date.now() + args.ttlSeconds * 1000);
@@ -80,7 +80,7 @@ mcpServer.tool(
         reason: z.string().optional(),
         ttlSeconds: z.number().int().optional()
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         let workExpiresAt = undefined;
         if (args.ttlSeconds) {
             workExpiresAt = new Date(Date.now() + args.ttlSeconds * 1000);
@@ -108,7 +108,7 @@ mcpServer.tool(
         workStatus: z.string(),
         reason: z.string().optional()
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         await prisma.scheduledStatus.upsert({
             where: { date: args.date },
             update: { patch: { workStatus: args.workStatus, reason: args.reason } },
@@ -127,7 +127,7 @@ mcpServer.tool(
         from: z.string().optional(),
         to: z.string().optional()
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         const result = await prisma.scheduledStatus.findMany({
             where: {
                 date: {
@@ -149,7 +149,7 @@ mcpServer.tool(
     {
         date: z.string()
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         await prisma.scheduledStatus.delete({
             where: { date: args.date }
         }).catch(() => {}); // Ignore not found
@@ -165,7 +165,7 @@ mcpServer.tool(
     {
         region: z.string().optional()
     },
-    async (args, extra) => {
+    async (args, _extra) => {
         const result = await holidayService.fetchHolidays(args.region);
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
@@ -173,25 +173,13 @@ mcpServer.tool(
     }
 );
 
-// Instantiate transport once
-const transport = new StreamableHTTPServerTransport();
-
-let connectionPromise: Promise<void> | null = null;
-
 // HTTP Handler
 export const handleMcpRequest = async (req: Request, res: Response) => {
-    // Check for auth context (set by middleware)
-    if (!(req as any).userSession) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-
+    logger.info({ method: req.method, url: req.url }, "Handling MCP request");
     try {
-        if (!connectionPromise) {
-            connectionPromise = mcpServer.connect(transport);
-        }
-        await connectionPromise;
-
-        // Delegate to transport
+        const transport = new StreamableHTTPServerTransport();
+        await mcpServer.connect(transport);
+        logger.debug("MCP server connected to transport");
         await transport.handleRequest(req, res, req.body);
     } catch (err) {
         logger.error({ err, requestId: getRequestId(req) }, "MCP Transport error");
