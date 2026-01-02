@@ -2,14 +2,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { Request, Response } from "express";
-import prisma from '../db';
 import { StatusResolver } from '../services/resolver';
 import { HolidayService } from '../services/holiday';
+import { TrackerService } from '../services/tracker';
 import { createLogger, getRequestId } from '../logger';
 
 const logger = createLogger('server:mcp');
 const resolver = StatusResolver.getInstance();
 const holidayService = HolidayService.getInstance();
+const tracker = TrackerService.getInstance();
 
 // Create MCP Server
 export const mcpServer = new McpServer({
@@ -18,32 +19,33 @@ export const mcpServer = new McpServer({
 });
 
 // Register tools
-mcpServer.tool(
-    "status_get_now",
-    "Get resolved status for now",
-    {},
-    async (_args, _extra) => {
-        const result = await resolver.resolveStatus();
-        return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
-        };
-    }
-);
 
+// status_get: Get resolved status for now or a specific date
 mcpServer.tool(
-    "status_get_date",
-    "Get resolved status for a specific date",
+    "status_get",
+    "Get resolved status for now or a specific date",
     {
-        date: z.string().describe("YYYY-MM-DD")
+        date: z.string().describe("YYYY-MM-DD").optional()
     },
     async (args, _extra) => {
-        const result = await resolver.resolveStatus(new Date(args.date));
+        let date = undefined;
+        if (args.date) {
+            date = new Date(args.date);
+            if (isNaN(date.getTime())) {
+                 return {
+                    isError: true,
+                    content: [{ type: "text", text: "Invalid date format. Use YYYY-MM-DD" }]
+                 };
+            }
+        }
+        const result = await resolver.resolveStatus(date);
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
         };
     }
 );
 
+// status_set_override: Set manual status override
 mcpServer.tool(
     "status_set_override",
     "Set manual status override",
@@ -53,18 +55,7 @@ mcpServer.tool(
         ttlSeconds: z.number().int().optional()
     },
     async (args, _extra) => {
-        let expiresAt = undefined;
-        if (args.ttlSeconds) {
-            expiresAt = new Date(Date.now() + args.ttlSeconds * 1000);
-        }
-        await prisma.workStatusEvent.create({
-            data: {
-                source: 'manual',
-                status: args.status,
-                reason: args.reason,
-                expiresAt
-            }
-        });
+        await tracker.setWorkStatus(args.status, args.reason, args.ttlSeconds);
         const result = await resolver.resolveStatus();
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
@@ -72,54 +63,160 @@ mcpServer.tool(
     }
 );
 
+// status_get_work: Get only work status
+mcpServer.tool(
+    "status_get_work",
+    "Get only work status",
+    {
+        date: z.string().describe("YYYY-MM-DD").optional()
+    },
+    async (args, _extra) => {
+        let date = undefined;
+        if (args.date) {
+             date = new Date(args.date);
+             if (isNaN(date.getTime())) {
+                 return {
+                    isError: true,
+                    content: [{ type: "text", text: "Invalid date format. Use YYYY-MM-DD" }]
+                 };
+            }
+        }
+        const status = await resolver.resolveStatus(date);
+        return {
+            content: [{ type: "text", text: JSON.stringify({ workStatus: status.workStatus, effectiveDate: status.effectiveDate }, null, 2) }]
+        };
+    }
+);
+
+// status_set_work: Set manual work status override (alias/wrapper for set_override)
 mcpServer.tool(
     "status_set_work",
-    "Set manual work status override (alias for set_override)",
+    "Set manual work status override",
     {
         workStatus: z.string(),
         reason: z.string().optional(),
         ttlSeconds: z.number().int().optional()
     },
     async (args, _extra) => {
-        let workExpiresAt = undefined;
-        if (args.ttlSeconds) {
-            workExpiresAt = new Date(Date.now() + args.ttlSeconds * 1000);
-        }
-        await prisma.workStatusEvent.create({
-            data: {
-                source: 'manual',
-                status: args.workStatus,
-                reason: args.reason,
-                expiresAt: workExpiresAt
-            }
-        });
-        const result = await resolver.resolveStatus();
+        await tracker.setWorkStatus(args.workStatus, args.reason, args.ttlSeconds);
+        const status = await resolver.resolveStatus();
         return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+            content: [{ type: "text", text: JSON.stringify({ workStatus: status.workStatus, effectiveDate: status.effectiveDate }, null, 2) }]
         };
     }
 );
 
+// status_get_location: Get only location status
+mcpServer.tool(
+    "status_get_location",
+    "Get only location status",
+    {},
+    async (_args, _extra) => {
+        const status = await resolver.resolveStatus();
+        return {
+            content: [{ type: "text", text: JSON.stringify({ location: status.location, effectiveDate: status.effectiveDate }, null, 2) }]
+        };
+    }
+);
+
+// status_set_location: Set manual location
+mcpServer.tool(
+    "status_set_location",
+    "Set manual location",
+    {
+        latitude: z.number(),
+        longitude: z.number(),
+        locationName: z.string().optional(),
+        source: z.string().default('manual'),
+        ttlSeconds: z.number().int().optional()
+    },
+    async (args, _extra) => {
+        await tracker.setLocation(args.latitude, args.longitude, args.locationName, args.source, args.ttlSeconds);
+        const status = await resolver.resolveStatus();
+        return {
+            content: [{ type: "text", text: JSON.stringify({ location: status.location, effectiveDate: status.effectiveDate }, null, 2) }]
+        };
+    }
+);
+
+// status_get_location_history: Get location history
+mcpServer.tool(
+    "status_get_location_history",
+    "Get location history",
+    {
+        from: z.string().optional(),
+        to: z.string().optional(),
+        limit: z.number().int().optional()
+    },
+    async (args, _extra) => {
+        let fromDate = undefined;
+        let toDate = undefined;
+        if (args.from) {
+            fromDate = new Date(args.from);
+             if (isNaN(fromDate.getTime())) {
+                 return {
+                    isError: true,
+                    content: [{ type: "text", text: "Invalid from date" }]
+                 };
+            }
+        }
+        if (args.to) {
+            toDate = new Date(args.to);
+             if (isNaN(toDate.getTime())) {
+                 return {
+                    isError: true,
+                    content: [{ type: "text", text: "Invalid to date" }]
+                 };
+            }
+        }
+
+        const events = await tracker.getLocationHistory(fromDate, toDate, args.limit);
+        return {
+            content: [{
+                type: "text",
+                text: JSON.stringify({
+                    events: events.map(event => ({
+                        latitude: event.latitude,
+                        longitude: event.longitude,
+                        locationName: event.name || undefined,
+                        source: event.source,
+                        timestamp: event.createdAt.toISOString()
+                    }))
+                }, null, 2)
+            }]
+        };
+    }
+);
+
+// status_schedule_set: Set scheduled override
 mcpServer.tool(
     "status_schedule_set",
     "Set scheduled override for a date",
     {
         date: z.string().describe("YYYY-MM-DD"),
-        workStatus: z.string(),
+        workStatus: z.string().optional(),
+        location: z.object({
+            latitude: z.number(),
+            longitude: z.number(),
+            locationName: z.string().optional()
+        }).optional(),
         reason: z.string().optional()
     },
     async (args, _extra) => {
-        await prisma.scheduledStatus.upsert({
-            where: { date: args.date },
-            update: { patch: { workStatus: args.workStatus, reason: args.reason } },
-            create: { date: args.date, patch: { workStatus: args.workStatus, reason: args.reason } }
-        });
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date)) {
+             return {
+                isError: true,
+                content: [{ type: "text", text: "Invalid date format. Use YYYY-MM-DD" }]
+             };
+        }
+        await tracker.upsertSchedule(args.date, args.workStatus, args.location, args.reason);
         return {
             content: [{ type: "text", text: JSON.stringify({ success: true }, null, 2) }]
         };
     }
 );
 
+// status_schedule_list: List scheduled overrides
 mcpServer.tool(
     "status_schedule_list",
     "List scheduled overrides",
@@ -128,21 +225,14 @@ mcpServer.tool(
         to: z.string().optional()
     },
     async (args, _extra) => {
-        const result = await prisma.scheduledStatus.findMany({
-            where: {
-                date: {
-                    gte: args.from,
-                    lte: args.to
-                }
-            },
-            orderBy: { date: 'asc' }
-        });
+        const result = await tracker.listSchedules(args.from, args.to);
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
         };
     }
 );
 
+// status_schedule_delete: Delete scheduled override
 mcpServer.tool(
     "status_schedule_delete",
     "Delete scheduled override",
@@ -150,15 +240,14 @@ mcpServer.tool(
         date: z.string()
     },
     async (args, _extra) => {
-        await prisma.scheduledStatus.delete({
-            where: { date: args.date }
-        }).catch(() => {}); // Ignore not found
+        await tracker.deleteSchedule(args.date).catch(() => {}); // Ignore not found
         return {
             content: [{ type: "text", text: JSON.stringify({ success: true }, null, 2) }]
         };
     }
 );
 
+// holidays_list: List holidays
 mcpServer.tool(
     "holidays_list",
     "List holidays for current year",

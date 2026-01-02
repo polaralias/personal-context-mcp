@@ -1,6 +1,6 @@
 # personal-context-mcp
 
-Personal Context MCP server for status + location signals, with an HTTP API and MCP endpoints.
+Personal Context MCP server for status + location signals, exposed as MCP tools.
 
 ## Setup (local)
 
@@ -24,9 +24,6 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/status_db
 # Optional: Bearer token for MCP endpoint protection. If unset, the MCP endpoint is open.
 MCP_BEARER_TOKEN=replace-with-a-token
 
-# REST API protection (status/work, etc)
-AUTH_TOKEN=replace-with-a-strong-token
-
 # Home Assistant connector
 HA_URL=https://homeassistant.local
 HA_TOKEN=replace-with-ha-long-lived-token
@@ -46,7 +43,6 @@ LOCATION_STALE_HOURS=6
 | Variable | Required For | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | All runtime | Used by Prisma in `src/db.ts`. |
-| `AUTH_TOKEN` | Protected REST routes | Used by `src/middleware/auth.ts`. |
 | `HA_URL` | Home Assistant polling | Required to enable HA polling in `src/jobs.ts`. |
 | `HA_TOKEN` | Home Assistant polling | Required with `HA_URL` in `src/jobs.ts`/`src/connectors/homeassistant.ts`. |
 | `GOOGLE_API_KEY` | Google connector polling | Required to enable polling in `src/jobs.ts`/`src/connectors/google.ts`. |
@@ -110,71 +106,32 @@ This repository includes a `Dockerfile` and `docker-compose.yml` for easy local 
     docker compose down
     ```
 
-### Configuration
-
-You can configure the deployment via environment variables in `docker-compose.yml`.
-
-| Variable | Default (Docker) | Description |
-| :--- | :--- | :--- |
-| `PORT` | `3000` | Port the application listens on inside the container. |
-| `DATABASE_URL` | `postgresql://...` | Connection string for the internal Postgres service. |
-| `AUTH_TOKEN` | - | **Important:** Set this to a strong secret for managing REST API access. |
-| `HA_URL` | - | URL for Home Assistant integration. |
-| `HA_TOKEN` | - | Long-lived access token for Home Assistant. |
-
-## Reverse Proxy Setup (Nginx Proxy Manager)
-
-This application is designed to work behind a reverse proxy like Nginx Proxy Manager (NPM).
-
-### Setup Steps in NPM
-
-1.  **Add Proxy Host:**
-    *   **Domain Names:** `status.yourdomain.com` (or similar).
-    *   **Scheme:** `http`
-    *   **Forward Hostname / IP:** The IP address of your Docker host (e.g., `192.168.1.100` or `host.docker.internal` if supported).
-    *   **Forward Port:** `3000` (or whatever you mapped in `docker-compose.yml`).
-    *   **Block Common Exploits:** Enable.
-    *   **Websockets Support:** **Enable** (Required for MCP SSE connection, although Streamable HTTP is used, websockets may be useful for other features or future proofing).
-
-2.  **SSL:**
-    *   Request a new certificate (Let's Encrypt).
-    *   **Force SSL:** Enable.
-    *   **HTTP/2 Support:** Enable.
-
-### Proxy Headers
-The application is configured to trust proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`). Nginx Proxy Manager handles this automatically by default. This ensures that the application correctly identifies `https` protocol and generates correct redirect URLs during authentication.
-
 ## MCP Connection
 
 This server supports the MCP Streamable HTTP transport at `/mcp`.
 
 1.  **Endpoint:** `http(s)://<host>/mcp`
-2.  **Authentication:** Requires `Authorization: Bearer <token>` header.
+2.  **Authentication:** Requires `Authorization: Bearer <token>` header if `MCP_BEARER_TOKEN` is set.
 
-### Authentication Flow
+### Available Tools
 
-This server exposes a single MCP endpoint over Streamable HTTP.
+| Tool Name | Description | Inputs |
+| :--- | :--- | :--- |
+| `status_get` | Get resolved status for now or a specific date | `date` (YYYY-MM-DD, optional) |
+| `status_set_override` | Set manual status override | `status` (string), `reason` (string, optional), `ttlSeconds` (number, optional) |
+| `status_get_work` | Get only work status | `date` (YYYY-MM-DD, optional) |
+| `status_set_work` | Set manual work status override | `workStatus` (string), `reason` (string, optional), `ttlSeconds` (number, optional) |
+| `status_get_location` | Get only location status | (none) |
+| `status_set_location` | Set manual location | `latitude` (number), `longitude` (number), `locationName` (string, optional), `source` (string, default 'manual'), `ttlSeconds` (number, optional) |
+| `status_get_location_history` | Get location history | `from` (string, optional), `to` (string, optional), `limit` (number, optional) |
+| `status_schedule_set` | Set scheduled override for a date | `date` (YYYY-MM-DD), `workStatus` (string, optional), `location` (object, optional), `reason` (string, optional) |
+| `status_schedule_list` | List scheduled overrides | `from` (string, optional), `to` (string, optional) |
+| `status_schedule_delete` | Delete scheduled override | `date` (string) |
+| `holidays_list` | List holidays for current year | `region` (string, optional) |
 
-1.  **Initiate Connection:**
-    *   Open the MCP Client (e.g., Claude Desktop).
-    *   Enter the MCP endpoint: `https://status.yourdomain.com/mcp` (or `http://localhost:3000/mcp`).
+### Operational Endpoints
 
-To connect via an MCP Client (e.g., Claude Desktop, Cursor), configure it to point to this URL.
+*   `GET /health`: Health check.
+*   `GET /docs`: Swagger UI (documenting available tools/schemas).
+*   `GET /`: Configuration UI.
 
-If `MCP_BEARER_TOKEN` is set, ensure the client sends the `Authorization` header.
-
-## REST API usage
-
-For manual API calls (e.g., setting status via Curl or Shortcuts), use the `AUTH_TOKEN` set in your environment variables:
-
-```bash
-curl -X PUT https://status.yourdomain.com/status \
-  -H "Authorization: Bearer YOUR_AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"working"}'
-```
-
-## API docs
-
-- OpenAPI spec: [`openapi.yaml`](./openapi.yaml)
-- Swagger UI: `http://localhost:3000/docs` (or `https://status.yourdomain.com/docs`)
