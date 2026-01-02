@@ -39,9 +39,6 @@ GOOGLE_POLL_CRON=0 * * * *
 # Optional runtime
 PORT=3000
 LOCATION_STALE_HOURS=6
-
-# Legacy MCP Routes (SSE + JSON-RPC)
-ENABLE_LEGACY_SSE=false
 ```
 
 **Required env vars**
@@ -61,7 +58,6 @@ ENABLE_LEGACY_SSE=false
 - `GOOGLE_POLL_CRON`: cron schedule for Google polling (defaults to hourly).
 - `PORT`: server port (default `3000`).
 - `LOCATION_STALE_HOURS`: resolver staleness window.
-- `ENABLE_LEGACY_SSE`: Set to `true` to enable legacy `/mcp/sse` and `/mcp/messages` endpoints.
 
 ### Database + Prisma
 
@@ -138,7 +134,7 @@ This application is designed to work behind a reverse proxy like Nginx Proxy Man
     *   **Forward Hostname / IP:** The IP address of your Docker host (e.g., `192.168.1.100` or `host.docker.internal` if supported).
     *   **Forward Port:** `3000` (or whatever you mapped in `docker-compose.yml`).
     *   **Block Common Exploits:** Enable.
-    *   **Websockets Support:** **Enable** (Required for MCP SSE connection).
+    *   **Websockets Support:** **Enable** (Required for MCP SSE connection, although Streamable HTTP is used, websockets may be useful for other features or future proofing).
 
 2.  **SSL:**
     *   Request a new certificate (Let's Encrypt).
