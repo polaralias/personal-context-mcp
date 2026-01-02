@@ -11,6 +11,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   // 1. Check Environment Master Token
   if (process.env.AUTH_TOKEN && token === process.env.AUTH_TOKEN) {
+    (req as any).userSession = { type: 'master' };
     return next();
   }
 
