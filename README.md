@@ -21,13 +21,10 @@ Create a `.env` file (or export env vars directly):
 
 ```bash
 DATABASE_URL=postgresql://postgres:password@localhost:5432/status_db
-# Optional: Bearer token for MCP endpoint protection. If unset, the MCP endpoint is open.
-MCP_BEARER_TOKEN=replace-with-a-token
 
-# Home Assistant connector
-HA_URL=https://homeassistant.local
-HA_TOKEN=replace-with-ha-long-lived-token
-HA_ENTITY_ID=device_tracker.my_phone
+# Auth Configuration (REQUIRED for Connect Flow)
+MASTER_KEY=change-this-to-at-least-32-byte-random-string
+REDIRECT_URI_ALLOWLIST=http://localhost:8080/callback
 
 # Google connector
 GOOGLE_API_KEY=replace-with-google-api-key
@@ -36,6 +33,8 @@ GOOGLE_POLL_CRON=0 * * * *
 # Optional runtime
 PORT=3000
 LOCATION_STALE_HOURS=6
+CODE_TTL_SECONDS=90
+TOKEN_TTL_SECONDS=3600
 ```
 
 **Required env vars**
@@ -43,14 +42,14 @@ LOCATION_STALE_HOURS=6
 | Variable | Required For | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | All runtime | Used by Prisma in `src/db.ts`. |
-| `HA_URL` | Home Assistant polling | Required to enable HA polling in `src/jobs.ts`. |
-| `HA_TOKEN` | Home Assistant polling | Required with `HA_URL` in `src/jobs.ts`/`src/connectors/homeassistant.ts`. |
-| `GOOGLE_API_KEY` | Google connector polling | Required to enable polling in `src/jobs.ts`/`src/connectors/google.ts`. |
+| `MASTER_KEY` | Auth | Used to encrypt configuration and sign tokens. Must be at least 32 bytes. |
+| `REDIRECT_URI_ALLOWLIST` | Auth | Comma-separated list of allowed redirect URIs for the Connect flow. |
 
 **Related env vars** (optional but commonly used)
 
-- `MCP_BEARER_TOKEN`: If set, requires `Authorization: Bearer <token>` for `/mcp` access.
-- `HA_ENTITY_ID`: entity to read in Home Assistant (used by `HomeAssistantConnector`).
+- `CODE_TTL_SECONDS`: Expiry for auth codes (default 90s).
+- `TOKEN_TTL_SECONDS`: Expiry for access tokens (default 3600s).
+- `GOOGLE_API_KEY`: Google connector polling.
 - `GOOGLE_POLL_CRON`: cron schedule for Google polling (defaults to hourly).
 - `PORT`: server port (default `3000`).
 - `LOCATION_STALE_HOURS`: resolver staleness window.
@@ -96,6 +95,8 @@ This repository includes a `Dockerfile` and `docker-compose.yml` for easy local 
     ```
     This will start the `status-mcp` service on port 3000 and a PostgreSQL database.
 
+    **Note:** The `docker-compose.yml` contains example values for `MASTER_KEY` and `REDIRECT_URI_ALLOWLIST`. You **MUST** change these for any real deployment.
+
 2.  **View logs:**
     ```bash
     docker compose logs -f
@@ -106,12 +107,49 @@ This repository includes a `Dockerfile` and `docker-compose.yml` for easy local 
     docker compose down
     ```
 
+## Authentication & Connection
+
+This server uses an OAuth-style Authorization Code flow with PKCE (S256).
+
+### Connect Flow
+
+1.  Navigate to `/connect` with the following query parameters:
+    *   `redirect_uri`: Must be in `REDIRECT_URI_ALLOWLIST`.
+    *   `state`: Random string.
+    *   `code_challenge`: PKCE challenge.
+    *   `code_challenge_method`: Must be `S256`.
+2.  Fill out the configuration form (e.g. Google API Key).
+3.  Submit to be redirected back to `redirect_uri` with a `code` and `state`.
+
+### Token Exchange
+
+Exchange the code for an access token:
+`POST /token`
+
+```json
+{
+  "grant_type": "authorization_code",
+  "code": "...",
+  "code_verifier": "...",
+  "redirect_uri": "..."
+}
+```
+
+Response:
+```json
+{
+  "access_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+```
+
 ## MCP Connection
 
 This server supports the MCP Streamable HTTP transport at `/mcp`.
 
 1.  **Endpoint:** `http(s)://<host>/mcp`
-2.  **Authentication:** Requires `Authorization: Bearer <token>` header if `MCP_BEARER_TOKEN` is set.
+2.  **Authentication:** Requires `Authorization: Bearer <token>` header with the token obtained from `/token`.
 
 ### Available Tools
 
@@ -133,5 +171,6 @@ This server supports the MCP Streamable HTTP transport at `/mcp`.
 
 *   `GET /health`: Health check.
 *   `GET /docs`: Swagger UI (documenting available tools/schemas).
-*   `GET /`: Configuration UI.
-
+*   `GET /connect`: Configuration and connection UI.
+*   `POST /token`: Token exchange endpoint.
+*   `GET /.well-known/mcp-config`: Configuration schema.
