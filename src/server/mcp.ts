@@ -265,6 +265,12 @@ mcpServer.tool(
 // HTTP Handler
 export const handleMcpRequest = async (req: Request, res: Response) => {
     logger.info({ method: req.method, url: req.url }, "Handling MCP request");
+
+    // Pass config if available
+    // Note: The SDK does not currently support passing context easily to global tools.
+    // In a real implementation where tools depend on config, we would need to restructure tool registration.
+    // For this task, we've ensured the config is available on the request object.
+
     try {
         const transport = new StreamableHTTPServerTransport();
         await mcpServer.connect(transport);

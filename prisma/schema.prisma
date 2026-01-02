@@ -54,25 +54,33 @@ model BankHolidayCache {
   @@map("bank_holidays_cache")
 }
 
-model ClientSession {
-  id            Int      @id @default(autoincrement())
-  token         String   @unique
-  connectionUrl String?  @map("connection_url")
-  config        Json?
-  expiresAt     DateTime @map("expires_at")
-  createdAt     DateTime @default(now()) @map("created_at")
+model Connection {
+  id              String   @id @default(uuid())
+  displayName     String?  @map("display_name")
+  configEncrypted String   @map("config_encrypted")
+  configVersion   Int?     @default(1) @map("config_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  @@map("client_sessions")
+  authCodes       AuthCode[]
+
+  @@map("connections")
 }
 
 model AuthCode {
-  id           Int      @id @default(autoincrement())
-  code         String   @unique
-  callbackUrl  String   @map("callback_url")
-  state        String?
-  sessionToken String   @map("session_token")
-  expiresAt    DateTime @map("expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id                  Int       @id @default(autoincrement())
+  codeHash            String    @unique @map("code_hash")
+  connectionId        String    @map("connection_id")
+  redirectUri         String    @map("redirect_uri")
+  state               String
+  codeChallenge       String    @map("code_challenge")
+  codeChallengeMethod String    @map("code_challenge_method")
+  expiresAt           DateTime  @map("expires_at")
+  usedAt              DateTime? @map("used_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  connection          Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@map("auth_codes")
+  @@index([codeHash])
 }

@@ -3,6 +3,9 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 import path from 'path';
 import authRoutes from './routes/auth';
+import connectRoutes from './routes/connect';
+import tokenRoutes from './routes/token';
+import wellKnownRoutes from './routes/well-known';
 import { handleMcpRequest } from './server/mcp';
 import { authenticateMcp } from './middleware/mcpAuth';
 import { startJobs } from './jobs';
@@ -18,17 +21,24 @@ const logger = createLogger('server');
 app.set('trust proxy', 1);
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Support form data
 app.use(requestLogger);
 
-// Serve static UI
+// Serve static UI (Keep existing public folder for now, but connect overrides it if path matches)
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'config.html'));
 });
 
+// New Auth Routes
+app.use('/connect', connectRoutes);
+app.use('/token', tokenRoutes);
+app.use('/.well-known', wellKnownRoutes);
+
 // MCP Streamable HTTP endpoint
 app.all('/mcp', authenticateMcp, handleMcpRequest);
 
+// Legacy routes (kept but return 501 as per auth.ts)
 app.use('/api/auth', authRoutes);
 
 // Docs

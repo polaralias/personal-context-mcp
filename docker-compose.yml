@@ -1,25 +1,30 @@
 version: '3.8'
 
 services:
-  status-mcp:
+  app:
     build: .
     ports:
       - "3000:3000"
     environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/mcp_db
       - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/status_db
-      # Add other env vars here (AUTH_TOKEN, HA_URL, etc.)
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_POLL_CRON=0 */15 * * * *
+      # Auth Configuration
+      - MASTER_KEY=CHANGE_THIS_TO_A_32_BYTE_RANDOM_STRING_FOR_ENCRYPTION_AND_SIGNING
+      - REDIRECT_URI_ALLOWLIST=http://localhost:8080/callback,https://myapp.com/callback
+      - CODE_TTL_SECONDS=90
+      - TOKEN_TTL_SECONDS=3600
     depends_on:
-      - postgres
+      - db
     restart: unless-stopped
 
-  postgres:
+  db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=postgres
+      - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=status_db
+      - POSTGRES_DB=mcp_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
