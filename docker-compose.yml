@@ -6,28 +6,29 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/mcp_db
-      - NODE_ENV=production
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GOOGLE_POLL_CRON=0 */15 * * * *
-      # Auth Configuration
-      - MASTER_KEY=CHANGE_THIS_TO_A_32_BYTE_RANDOM_STRING_FOR_ENCRYPTION_AND_SIGNING
-      - REDIRECT_URI_ALLOWLIST=http://localhost:8080/callback,https://myapp.com/callback
-      - CODE_TTL_SECONDS=90
-      - TOKEN_TTL_SECONDS=3600
+      - DATABASE_URL=postgresql://user:password@db:5432/mcp
+      - GOOGLE_API_KEY=dummy
+      - GOOGLE_POLL_CRON=0 0 * * *
+      # MASTER_KEY: 32 bytes encoded as hex. This is an EXAMPLE. Change for production.
+      - MASTER_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      # REDIRECT_URI_ALLOWLIST: Comma-separated list of allowed redirect URIs.
+      - REDIRECT_URI_ALLOWLIST=http://localhost:3000
+      # Optional: Set mode to 'exact' (default) or 'prefix'
+      # - REDIRECT_URI_ALLOWLIST_MODE=exact
+      # Optional TTL overrides
+      # - CODE_TTL_SECONDS=300
+      # - TOKEN_TTL_SECONDS=3600
     depends_on:
       - db
-    restart: unless-stopped
 
   db:
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=mcp_db
+      - POSTGRES_DB=mcp
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
 volumes:
   postgres_data:
