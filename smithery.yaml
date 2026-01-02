@@ -4,18 +4,10 @@ description: MCP server for status and schedule lookups.
 baseUrl: http://localhost:3000
 transport:
   type: sse
-  sseEndpoint: /mcp/sse
-  messagesEndpoint: /mcp/messages
 auth:
   type: bearer
   header: Authorization
   tokenEnv: AUTH_TOKEN
-  sessionFlow:
-    authorizeEndpoint: /api/auth/authorize
-    tokenEndpoint: /api/auth/token
-    description: >
-      Obtain a session token by exchanging an auth code from /api/auth/authorize
-      at /api/auth/token, then send it as Authorization: Bearer <token>.
 
 tools:
   - name: status_get_now

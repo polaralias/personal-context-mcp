@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../db';
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -14,25 +13,6 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   if (process.env.AUTH_TOKEN && token === process.env.AUTH_TOKEN) {
     (req as any).userSession = { type: 'master' };
     return next();
-  }
-
-  // 2. Check Database Sessions
-  try {
-    const session = await prisma.clientSession.findUnique({
-      where: { token }
-    });
-
-    if (session) {
-      // Check expiry if set
-      if (session.expiresAt && session.expiresAt < new Date()) {
-        return res.status(401).json({ error: 'Unauthorized: Token expired' });
-      }
-      (req as any).userSession = session;
-      return next();
-    }
-  } catch (error) {
-    console.error('Auth Middleware Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
   }
 
   return res.status(401).json({ error: 'Unauthorized: Invalid token' });
