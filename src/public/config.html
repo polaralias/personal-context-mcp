@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configure Status MCP</title>
+    <title>Configure Personal Context MCP Server</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">Status MCP Configuration</h1>
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Personal Context MCP Server</h1>
 
         <div id="loading" class="text-center text-gray-500">
             Loading...
@@ -58,7 +58,7 @@
             const connectionUrlInput = document.getElementById('connectionUrl');
 
             if (!callbackUrl || !state) {
-                loading.textContent = 'Welcome to Status MCP Server. No configuration session active.';
+                loading.textContent = 'Welcome to Personal Context MCP Server. No configuration session active.';
                 return;
             }
 

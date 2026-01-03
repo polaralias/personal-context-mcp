@@ -1,11 +1,12 @@
-# Smoke Test for Personal Context MCP
+# Smoke Test for Personal Context MCP Server
 
 $ErrorActionPreference = "Stop"
 
 function Assert-Success($response, $message) {
     if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
         Write-Host "✅ $message - Success" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "❌ $message - Failed with status $($response.StatusCode)" -ForegroundColor Red
         Write-Host $response.Content
         exit 1
@@ -13,7 +14,7 @@ function Assert-Success($response, $message) {
 }
 
 # 1. Inputs
-Write-Host "--- Personal Context MCP Smoke Test ---"
+Write-Host "--- Personal Context MCP Server Smoke Test ---"
 $BaseUrl = Read-Host "Enter Base URL (e.g. http://localhost:3010)"
 $Code = Read-Host "Enter Auth Code (from browser redirect)"
 $CodeVerifier = Read-Host "Enter Code Verifier (PKCE verifier used in browser)"
@@ -26,10 +27,10 @@ if ([string]::IsNullOrWhiteSpace($RedirectUri)) { $RedirectUri = "http://localho
 Write-Host "`nStep 1: Exchanging code for token..."
 
 $tokenBody = @{
-    grant_type = "authorization_code"
-    code = $Code
+    grant_type    = "authorization_code"
+    code          = $Code
     code_verifier = $CodeVerifier
-    redirect_uri = $RedirectUri
+    redirect_uri  = $RedirectUri
 }
 
 try {
@@ -39,7 +40,8 @@ try {
     $tokenJson = $tokenResponse.Content | ConvertFrom-Json
     $accessToken = $tokenJson.access_token
     Write-Host "Got Access Token: $accessToken" -ForegroundColor Gray
-} catch {
+}
+catch {
     Write-Host "❌ Token Exchange Failed: $_" -ForegroundColor Red
     exit 1
 }
@@ -49,8 +51,8 @@ Write-Host "`nStep 2: Calling MCP List Tools..."
 
 $mcpBody = @{
     jsonrpc = "2.0"
-    method = "tools/list"
-    id = 1
+    method  = "tools/list"
+    id      = 1
 } | ConvertTo-Json
 
 try {
@@ -60,7 +62,8 @@ try {
     $mcpJson = $mcpResponse.Content | ConvertFrom-Json
     $toolsCount = $mcpJson.result.tools.Count
     Write-Host "Found $toolsCount tools." -ForegroundColor Cyan
-} catch {
+}
+catch {
     Write-Host "❌ MCP Call Failed: $_" -ForegroundColor Red
     exit 1
 }

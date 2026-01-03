@@ -30,7 +30,7 @@ interface ExtendedTransport extends StreamableHTTPServerTransport {
 
 // Create MCP Server
 export const mcpServer = new McpServer({
-    name: "status-mcp",
+    name: "personal-context-mcp-server",
     version: "1.0.0"
 });
 
@@ -48,10 +48,10 @@ mcpServer.tool(
         if (args.date) {
             date = new Date(args.date);
             if (isNaN(date.getTime())) {
-                 return {
+                return {
                     isError: true,
                     content: [{ type: "text", text: "Invalid date format. Use YYYY-MM-DD" }]
-                 };
+                };
             }
         }
         const result = await resolver.resolveStatus(date);
@@ -89,12 +89,12 @@ mcpServer.tool(
     async (args, _extra) => {
         let date = undefined;
         if (args.date) {
-             date = new Date(args.date);
-             if (isNaN(date.getTime())) {
-                 return {
+            date = new Date(args.date);
+            if (isNaN(date.getTime())) {
+                return {
                     isError: true,
                     content: [{ type: "text", text: "Invalid date format. Use YYYY-MM-DD" }]
-                 };
+                };
             }
         }
         const status = await resolver.resolveStatus(date);
@@ -169,20 +169,20 @@ mcpServer.tool(
         let toDate = undefined;
         if (args.from) {
             fromDate = new Date(args.from);
-             if (isNaN(fromDate.getTime())) {
-                 return {
+            if (isNaN(fromDate.getTime())) {
+                return {
                     isError: true,
                     content: [{ type: "text", text: "Invalid from date" }]
-                 };
+                };
             }
         }
         if (args.to) {
             toDate = new Date(args.to);
-             if (isNaN(toDate.getTime())) {
-                 return {
+            if (isNaN(toDate.getTime())) {
+                return {
                     isError: true,
                     content: [{ type: "text", text: "Invalid to date" }]
-                 };
+                };
             }
         }
 
@@ -220,10 +220,10 @@ mcpServer.tool(
     },
     async (args, _extra) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date)) {
-             return {
+            return {
                 isError: true,
                 content: [{ type: "text", text: "Invalid date format. Use YYYY-MM-DD" }]
-             };
+            };
         }
         await tracker.upsertSchedule(args.date, args.workStatus, args.location, args.reason);
         return {
@@ -256,7 +256,7 @@ mcpServer.tool(
         date: z.string()
     },
     async (args, _extra) => {
-        await tracker.deleteSchedule(args.date).catch(() => {}); // Ignore not found
+        await tracker.deleteSchedule(args.date).catch(() => { }); // Ignore not found
         return {
             content: [{ type: "text", text: JSON.stringify({ success: true }, null, 2) }]
         };
@@ -313,10 +313,10 @@ export const handleMcpRequest = async (req: Request, res: Response) => {
             };
 
             t.onclose = () => {
-                 if (currentSessionId && sessionMap.has(currentSessionId)) {
-                     logger.info({ sessionId: currentSessionId }, "MCP Session closed (defensive cleanup)");
-                     sessionMap.delete(currentSessionId);
-                 }
+                if (currentSessionId && sessionMap.has(currentSessionId)) {
+                    logger.info({ sessionId: currentSessionId }, "MCP Session closed (defensive cleanup)");
+                    sessionMap.delete(currentSessionId);
+                }
             };
 
             await mcpServer.connect(transport);

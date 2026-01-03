@@ -100,7 +100,7 @@ describe('Auth Flow Integration Tests', () => {
                 code_challenge_method: 'S256'
             });
             expect(res.status).toBe(200);
-            expect(res.text).toContain('Connect Personal Context MCP');
+            expect(res.text).toContain('Connect Personal Context MCP Server');
         });
     });
 
@@ -142,17 +142,17 @@ describe('Auth Flow Integration Tests', () => {
         });
 
         it('should enforce rate limiting', async () => {
-             // We need to send > 10 requests to trigger rate limit
-             // Note: Supertest requests might come from same "IP" in test env
+            // We need to send > 10 requests to trigger rate limit
+            // Note: Supertest requests might come from same "IP" in test env
 
-             // First 10 should be fine (or fail due to mock logic, but not 429)
-             for (let i = 0; i < 10; i++) {
-                 await request(app).post('/token').send({ grant_type: 'authorization_code' });
-             }
+            // First 10 should be fine (or fail due to mock logic, but not 429)
+            for (let i = 0; i < 10; i++) {
+                await request(app).post('/token').send({ grant_type: 'authorization_code' });
+            }
 
-             // 11th should be 429
-             const res = await request(app).post('/token').send({ grant_type: 'authorization_code' });
-             expect(res.status).toBe(429);
+            // 11th should be 429
+            const res = await request(app).post('/token').send({ grant_type: 'authorization_code' });
+            expect(res.status).toBe(429);
         });
     });
 });

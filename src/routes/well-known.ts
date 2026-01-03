@@ -6,7 +6,7 @@ const router = express.Router();
 
 export const configSchema = {
     id: "personal-context-mcp",
-    name: "Personal Context MCP",
+    name: "Personal Context MCP Server",
     description: "Aggregates user status signals like location and calendar events.",
     version: packageJson.version || "1.0.0",
     fields: [
