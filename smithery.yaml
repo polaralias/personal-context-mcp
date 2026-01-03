@@ -1,7 +1,7 @@
 name: status-mcp
 version: 1.0.0
 description: MCP server for status and schedule lookups.
-baseUrl: http://localhost:3000
+baseUrl: http://localhost:3010
 transport:
   type: http
 auth:

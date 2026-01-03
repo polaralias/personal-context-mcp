@@ -78,7 +78,7 @@ describe('Auth Flow Integration Tests', () => {
 
     describe('GET /connect', () => {
         it('should validate redirect_uri', async () => {
-            process.env.REDIRECT_URI_ALLOWLIST = 'http://localhost:3000';
+            process.env.REDIRECT_URI_ALLOWLIST = 'http://localhost:3010';
 
             const res = await request(app).get('/connect').query({
                 redirect_uri: 'http://evil.com',
@@ -91,10 +91,10 @@ describe('Auth Flow Integration Tests', () => {
         });
 
         it('should allow valid redirect_uri', async () => {
-            process.env.REDIRECT_URI_ALLOWLIST = 'http://localhost:3000';
+            process.env.REDIRECT_URI_ALLOWLIST = 'http://localhost:3010';
 
             const res = await request(app).get('/connect').query({
-                redirect_uri: 'http://localhost:3000',
+                redirect_uri: 'http://localhost:3010',
                 state: '123',
                 code_challenge: 'abc',
                 code_challenge_method: 'S256'
@@ -109,7 +109,7 @@ describe('Auth Flow Integration Tests', () => {
             mocks.findAndValidateAuthCode.mockResolvedValue({
                 id: 'code-123',
                 connectionId: 'conn-123',
-                redirectUri: 'http://localhost:3000',
+                redirectUri: 'http://localhost:3010',
                 codeChallenge: 'abc',
                 codeChallengeMethod: 'S256'
             });
@@ -120,7 +120,7 @@ describe('Auth Flow Integration Tests', () => {
                 grant_type: 'authorization_code',
                 code: 'valid-code',
                 code_verifier: 'verifier',
-                redirect_uri: 'http://localhost:3000'
+                redirect_uri: 'http://localhost:3010'
             });
 
             expect(res.status).toBe(200);
@@ -134,7 +134,7 @@ describe('Auth Flow Integration Tests', () => {
                 grant_type: 'authorization_code',
                 code: 'invalid-code',
                 code_verifier: 'verifier',
-                redirect_uri: 'http://localhost:3000'
+                redirect_uri: 'http://localhost:3010'
             });
 
             expect(res.status).toBe(400);

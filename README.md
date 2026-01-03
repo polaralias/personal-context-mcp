@@ -19,7 +19,7 @@ The server is configured via environment variables.
 *   `MASTER_KEY`: 32-byte hex string used for encryption. **MUST BE CHANGED FOR PRODUCTION.**
     *   Example: `0000000000000000000000000000000000000000000000000000000000000000`
 *   `REDIRECT_URI_ALLOWLIST`: Comma-separated list of allowed redirect URIs.
-    *   Example: `http://localhost:3000`
+    *   Example: `http://localhost:3010`
 
 ### Optional
 
@@ -44,15 +44,15 @@ The server exposes standard OAuth 2.0 discovery endpoints:
 
 To verify the server is working correctly, you can run the provided PowerShell smoke test.
 
-1.  Open `http://localhost:3000/connect?redirect_uri=http://localhost:3000&state=123&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256` in your browser (adjust params as needed).
+1.  Open `http://localhost:3010/connect?redirect_uri=http://localhost:3010&state=123&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256` in your browser (adjust params as needed).
 2.  Complete the configuration steps.
 3.  Copy the `code` from the redirect URL.
 4.  Run `scripts/smoke-test.ps1`.
 5.  Enter the required details when prompted:
-    *   Base URL: `http://localhost:3000`
+    *   Base URL: `http://localhost:3010`
     *   Code: (The code you copied)
     *   Code Verifier: `dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk` (matches the challenge above)
-    *   Redirect URI: `http://localhost:3000`
+    *   Redirect URI: `http://localhost:3010`
 
 The script will exchange the code for a token and verify access to the `/mcp` endpoint.
 

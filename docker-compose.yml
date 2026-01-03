@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/mcp
       - GOOGLE_API_KEY=dummy
@@ -12,7 +12,7 @@ services:
       # MASTER_KEY: 32 bytes encoded as hex. This is an EXAMPLE. Change for production.
       - MASTER_KEY=0000000000000000000000000000000000000000000000000000000000000000
       # REDIRECT_URI_ALLOWLIST: Comma-separated list of allowed redirect URIs.
-      - REDIRECT_URI_ALLOWLIST=http://localhost:3000
+      - REDIRECT_URI_ALLOWLIST=http://localhost:3010
       # Optional: Set mode to 'exact' (default) or 'prefix'
       # - REDIRECT_URI_ALLOWLIST_MODE=exact
       # Optional TTL overrides

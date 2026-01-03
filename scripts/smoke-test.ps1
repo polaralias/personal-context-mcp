@@ -14,13 +14,13 @@ function Assert-Success($response, $message) {
 
 # 1. Inputs
 Write-Host "--- Personal Context MCP Smoke Test ---"
-$BaseUrl = Read-Host "Enter Base URL (e.g. http://localhost:3000)"
+$BaseUrl = Read-Host "Enter Base URL (e.g. http://localhost:3010)"
 $Code = Read-Host "Enter Auth Code (from browser redirect)"
 $CodeVerifier = Read-Host "Enter Code Verifier (PKCE verifier used in browser)"
 $RedirectUri = Read-Host "Enter Redirect URI (must match the one used in browser)"
 
-if ([string]::IsNullOrWhiteSpace($BaseUrl)) { $BaseUrl = "http://localhost:3000" }
-if ([string]::IsNullOrWhiteSpace($RedirectUri)) { $RedirectUri = "http://localhost:3000" }
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) { $BaseUrl = "http://localhost:3010" }
+if ([string]::IsNullOrWhiteSpace($RedirectUri)) { $RedirectUri = "http://localhost:3010" }
 
 # 2. Exchange Code for Token
 Write-Host "`nStep 1: Exchanging code for token..."
