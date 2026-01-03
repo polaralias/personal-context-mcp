@@ -5,7 +5,41 @@ import { createLogger } from '../logger';
 const router = express.Router();
 const logger = createLogger('routes:token');
 
+// In-memory rate limiting for /token
+const tokenRateLimit = new Map<string, { count: number; timestamp: number }>();
+const TOKEN_WINDOW_MS = 60 * 1000; // 1 minute
+const TOKEN_MAX_REQUESTS = 10;
+
+const checkTokenRateLimit = (req: Request): boolean => {
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+    const limit = tokenRateLimit.get(ip);
+
+    if (!limit) {
+        tokenRateLimit.set(ip, { count: 1, timestamp: now });
+        return true;
+    }
+
+    if (now - limit.timestamp > TOKEN_WINDOW_MS) {
+        // Reset window
+        tokenRateLimit.set(ip, { count: 1, timestamp: now });
+        return true;
+    }
+
+    if (limit.count >= TOKEN_MAX_REQUESTS) {
+        return false;
+    }
+
+    limit.count++;
+    return true;
+};
+
 router.post('/', async (req: Request, res: Response) => {
+    // Apply rate limit
+    if (!checkTokenRateLimit(req)) {
+        return res.status(429).json({ error: 'too_many_requests', error_description: 'Rate limit exceeded' });
+    }
+
     // Support JSON and URL-encoded
     const { grant_type, code, code_verifier, redirect_uri } = req.body;
 

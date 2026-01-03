@@ -1,17 +1,66 @@
 import express, { Request, Response } from 'express';
 import { createConnection, createAuthCode } from '../services/auth';
 import { createLogger } from '../logger';
+import { configSchema } from './well-known';
 
 const router = express.Router();
 const logger = createLogger('routes:connect');
 
-// Config Schema for the UI
-// In a real scenario, this might come from a service or file
-const configSchema = [
-    { name: 'displayName', label: 'Display Name', type: 'text', required: false, description: 'A friendly name for this connection' },
-    { name: 'googleApiKey', label: 'Google API Key', type: 'password', required: true, description: 'API Key for Google services' }
-    // Add other config fields here as needed
-];
+// In-memory rate limiting for /connect
+const connectRateLimit = new Map<string, { count: number; timestamp: number }>();
+const CONNECT_WINDOW_MS = 60 * 1000; // 1 minute
+const CONNECT_MAX_REQUESTS = 20;
+
+const checkRateLimit = (req: Request): boolean => {
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+    const limit = connectRateLimit.get(ip);
+
+    if (!limit) {
+        connectRateLimit.set(ip, { count: 1, timestamp: now });
+        return true;
+    }
+
+    if (now - limit.timestamp > CONNECT_WINDOW_MS) {
+        // Reset window
+        connectRateLimit.set(ip, { count: 1, timestamp: now });
+        return true;
+    }
+
+    if (limit.count >= CONNECT_MAX_REQUESTS) {
+        return false;
+    }
+
+    limit.count++;
+    return true;
+};
+
+// Redirect URI Validation Helper
+const validateRedirectUri = (uri: string): boolean => {
+    if (!uri) return false;
+
+    // Check if absolute URL
+    try {
+        const parsed = new URL(uri);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return false;
+        }
+    } catch {
+        return false;
+    }
+
+    const allowListStr = process.env.REDIRECT_URI_ALLOWLIST || '';
+    const allowList = allowListStr.split(',').map(u => u.trim()).filter(u => u.length > 0);
+    const mode = process.env.REDIRECT_URI_ALLOWLIST_MODE || 'exact';
+
+    if (mode === 'prefix') {
+        return allowList.some(allowed => uri.startsWith(allowed));
+    }
+
+    // Default to exact
+    return allowList.includes(uri);
+};
+
 
 const renderHtml = (error?: string, values?: any, query?: any) => {
     const safeQuery = query || {};
@@ -27,14 +76,14 @@ const renderHtml = (error?: string, values?: any, query?: any) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect - Personal Context MCP</title>
+    <title>Connect - ${configSchema.name}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-md w-full max-w-xl overflow-hidden">
         <div class="bg-blue-600 p-6 text-white">
-            <h1 class="text-2xl font-bold">Connect Personal Context MCP</h1>
-            <p class="mt-2 opacity-90">Configure your connection settings.</p>
+            <h1 class="text-2xl font-bold">Connect ${configSchema.name}</h1>
+            <p class="mt-2 opacity-90">${configSchema.description}</p>
         </div>
 
         <div class="p-6">
@@ -48,21 +97,21 @@ const renderHtml = (error?: string, values?: any, query?: any) => {
                 <input type="hidden" name="code_challenge" value="${codeChallenge}">
                 <input type="hidden" name="code_challenge_method" value="${codeChallengeMethod}">
 
-                ${configSchema.map(field => `
+                ${configSchema.fields.map(field => `
                 <div>
-                    <label for="${field.name}" class="block text-sm font-medium text-gray-700 mb-1">
+                    <label for="${field.key}" class="block text-sm font-medium text-gray-700 mb-1">
                         ${field.label} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                     </label>
                     <input
-                        type="${field.type}"
-                        name="${field.name}"
-                        id="${field.name}"
+                        type="${field.secret ? 'password' : 'text'}"
+                        name="${field.key}"
+                        id="${field.key}"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="${field.description || ''}"
+                        placeholder="${field.help || ''}"
                         ${field.required ? 'required' : ''}
-                        value="${field.type !== 'password' && values && values[field.name] ? values[field.name] : ''}"
+                        value="${!field.secret && values && values[field.key] ? values[field.key] : (field.default || '')}"
                     >
-                    ${field.description ? `<p class="mt-1 text-xs text-gray-500">${field.description}</p>` : ''}
+                    ${field.help ? `<p class="mt-1 text-xs text-gray-500">${field.help}</p>` : ''}
                 </div>
                 `).join('')}
 
@@ -82,9 +131,7 @@ const renderHtml = (error?: string, values?: any, query?: any) => {
 router.get('/', (req: Request, res: Response) => {
     const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
 
-    const allowList = (process.env.REDIRECT_URI_ALLOWLIST || '').split(',').map(u => u.trim());
-
-    if (!redirect_uri || typeof redirect_uri !== 'string' || !allowList.includes(redirect_uri)) {
+    if (!redirect_uri || typeof redirect_uri !== 'string' || !validateRedirectUri(redirect_uri)) {
         return res.status(400).send('Invalid or missing redirect_uri');
     }
 
@@ -104,11 +151,14 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 router.post('/', async (req: Request, res: Response) => {
+    if (!checkRateLimit(req)) {
+         return res.status(429).send('Too many requests');
+    }
+
     const { redirect_uri, state, code_challenge, code_challenge_method, ...config } = req.body;
 
     // Re-validate params (security best practice)
-    const allowList = (process.env.REDIRECT_URI_ALLOWLIST || '').split(',').map(u => u.trim());
-    if (!redirect_uri || !allowList.includes(redirect_uri)) {
+    if (!redirect_uri || !validateRedirectUri(redirect_uri)) {
         return res.status(400).send('Invalid redirect_uri');
     }
     if (code_challenge_method !== 'S256') {
@@ -118,14 +168,18 @@ router.post('/', async (req: Request, res: Response) => {
     try {
         // Extract known config fields
         const finalConfig: any = {};
-        let displayName = null;
+        // We use the first non-secret field as displayName or default to "Connection"
+        let displayName = "Connection";
+        const nameField = configSchema.fields.find(f => f.key === 'displayName');
+        if (nameField && config[nameField.key]) {
+             displayName = config[nameField.key];
+        }
 
-        for (const field of configSchema) {
-            if (field.required && !config[field.name]) {
+        for (const field of configSchema.fields) {
+            if (field.required && !config[field.key]) {
                 return res.send(renderHtml(`Field ${field.label} is required`, config, req.body));
             }
-            finalConfig[field.name] = config[field.name];
-            if (field.name === 'displayName') displayName = config[field.name];
+            finalConfig[field.key] = config[field.key];
         }
 
         const connection = await createConnection(displayName, finalConfig);
