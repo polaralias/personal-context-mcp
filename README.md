@@ -16,8 +16,12 @@ The server is configured via environment variables.
 ### Required
 
 *   `DATABASE_URL`: PostgreSQL connection string.
-*   `MASTER_KEY`: 32-byte hex string used for encryption. **MUST BE CHANGED FOR PRODUCTION.**
-    *   Example: `0000000000000000000000000000000000000000000000000000000000000000`
+*   `MASTER_KEY`: Standardized 32-byte key handling. **MUST BE CHANGED FOR PRODUCTION.**
+    *   **Format 1 (Hex):** 64 hex characters (0-9, a-f). Decoded directly to 32 bytes.
+        *   Generate (OpenSSL): `openssl rand -hex 32`
+        *   Generate (PowerShell): `[BitConverter]::ToString((1..32 | % {Get-Random -Minimum 0 -Maximum 256})).Replace("-","").ToLower()`
+    *   **Format 2 (Passphrase):** Any other string. Derived to 32 bytes using SHA-256.
+    *   Example: `insecure-master-key-must-be-32-bytes-long` (passphrase)
 *   `REDIRECT_URI_ALLOWLIST`: Comma-separated list of allowed redirect URIs.
     *   Example: `http://localhost:3010`
 
@@ -77,4 +81,4 @@ Use Docker Compose for production deployment.
 docker-compose up -d --build
 ```
 
-**WARNING:** Ensure you replace the example `MASTER_KEY` and other sensitive values before deploying to production.
+**WARNING:** Ensure you replace the example `MASTER_KEY` with a strong, unique 32-byte key (64 hex characters) or a high-entropy passphrase before deploying to production. Weak keys will trigger runtime warnings.

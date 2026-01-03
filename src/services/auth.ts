@@ -1,17 +1,19 @@
 import crypto from 'crypto';
 import prisma from '../db';
 
+import { getMasterKeyBytes } from '../utils/masterKey';
+
 const ALGORITHM = 'aes-256-gcm';
-const MASTER_KEY = process.env.MASTER_KEY || 'insecure-master-key-must-be-32-bytes-long'; // Fallback for dev/test
-// Ensure key is 32 bytes
-const getKey = () => {
-    let key = MASTER_KEY;
+
+// Legacy derivation helper for fallback decryption
+const getLegacyKey = () => {
+    let key = process.env.MASTER_KEY || 'insecure-master-key-must-be-32-bytes-long';
     if (key.length < 32) {
         key = key.padEnd(32, '0');
     } else if (key.length > 32) {
         key = key.substring(0, 32);
     }
-    return key;
+    return Buffer.from(key);
 };
 
 // --- Crypto Helpers ---
@@ -27,9 +29,9 @@ export const verifyPkce = (verifier: string, challenge: string, method: string):
 };
 
 export const encryptConfig = (config: any): string => {
-    const key = getKey();
+    const key = getMasterKeyBytes();
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(key), iv);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     let encrypted = cipher.update(JSON.stringify(config), 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
@@ -38,20 +40,42 @@ export const encryptConfig = (config: any): string => {
 };
 
 export const decryptConfig = (encryptedString: string): any => {
-    const key = getKey();
     const parts = encryptedString.split(':');
     if (parts.length !== 3) throw new Error('Invalid encrypted string format');
 
     const [ivHex, authTagHex, encryptedHex] = parts;
     if (!ivHex || !authTagHex || !encryptedHex) throw new Error('Invalid encrypted string format');
 
-    const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(key), Buffer.from(ivHex, 'hex'));
-    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
 
-    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return JSON.parse(decrypted);
+    try {
+        // Try with new standardized key first
+        const key = getMasterKeyBytes();
+        const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+        decipher.setAuthTag(authTag);
+
+        let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return JSON.parse(decrypted);
+    } catch (error) {
+        // Fallback to legacy key derivation
+        try {
+            const legacyKey = getLegacyKey();
+            const decipher = crypto.createDecipheriv(ALGORITHM, legacyKey, iv);
+            decipher.setAuthTag(authTag);
+
+            let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+
+            console.warn('SUCCESS: Decrypted using legacy key derivation. Config should be re-saved to upgrade encryption.');
+            return JSON.parse(decrypted);
+        } catch (legacyError) {
+            throw new Error('Failed to decrypt config with both standardized and legacy keys');
+        }
+    }
 };
+
 
 // --- JWT Helpers ---
 
@@ -69,7 +93,7 @@ export const signToken = (connectionId: string): string => {
 
     const encode = (obj: any) => Buffer.from(JSON.stringify(obj)).toString('base64url');
     const signatureInput = `${encode(header)}.${encode(payload)}`;
-    const signature = crypto.createHmac('sha256', getKey()).update(signatureInput).digest('base64url');
+    const signature = crypto.createHmac('sha256', getMasterKeyBytes()).update(signatureInput).digest('base64url');
 
     return `${signatureInput}.${signature}`;
 };
@@ -80,7 +104,7 @@ export const verifyToken = (token: string): string | null => {
         if (!headerB64 || !payloadB64 || !signature) return null;
 
         const signatureInput = `${headerB64}.${payloadB64}`;
-        const expectedSignature = crypto.createHmac('sha256', getKey()).update(signatureInput).digest('base64url');
+        const expectedSignature = crypto.createHmac('sha256', getMasterKeyBytes()).update(signatureInput).digest('base64url');
 
         if (signature !== expectedSignature) return null;
 

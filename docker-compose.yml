@@ -9,8 +9,9 @@ services:
       - DATABASE_URL=postgresql://user:password@db:5432/mcp
       - GOOGLE_API_KEY=dummy
       - GOOGLE_POLL_CRON=0 0 * * *
-      # MASTER_KEY: 32 bytes encoded as hex. This is an EXAMPLE. Change for production.
-      - MASTER_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      # MASTER_KEY: 64 hex characters (32 bytes) or a strong passphrase.
+      # Generate with: openssl rand -hex 32
+      - MASTER_KEY=insecure-master-key-must-be-32-bytes-long
       # REDIRECT_URI_ALLOWLIST: Comma-separated list of allowed redirect URIs.
       - REDIRECT_URI_ALLOWLIST=http://localhost:3010
       # Optional: Set mode to 'exact' (default) or 'prefix'
