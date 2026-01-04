@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { findAndValidateAuthCode, markAuthCodeUsed, signToken, verifyPkce, getRegisteredClient } from '../services/auth';
 import { createLogger } from '../logger';
+import { hasMasterKey } from '../utils/masterKey';
 
 const router = express.Router();
 const logger = createLogger('routes:token');
@@ -35,6 +36,9 @@ const checkTokenRateLimit = (req: Request): boolean => {
 };
 
 router.post('/', async (req: Request, res: Response) => {
+    if (!hasMasterKey()) {
+        return res.status(400).json({ error: 'invalid_request', error_description: 'Token generation blocked: MASTER_KEY is missing.' });
+    }
     // Apply rate limit
     if (!checkTokenRateLimit(req)) {
         return res.status(429).json({ error: 'too_many_requests', error_description: 'Rate limit exceeded' });

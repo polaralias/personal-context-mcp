@@ -3,6 +3,14 @@ import crypto from 'crypto';
 const INSECURE_DEFAULT = 'insecure-master-key-must-be-32-bytes-long';
 
 /**
+ * Checks if MASTER_KEY is configured.
+ */
+export function hasMasterKey(): boolean {
+    const key = process.env.MASTER_KEY;
+    return !!(key && key.trim() !== '');
+}
+
+/**
  * Standardized MASTER_KEY handling.
  * 1. If 64 hex characters, treat as 32 bytes of key material.
  * 2. Otherwise, treat as passphrase and derive 32-byte key using SHA-256.
@@ -36,18 +44,24 @@ export function getMasterKeyBytes(): Buffer {
  */
 export function getMasterKeyInfo() {
     try {
+        if (!hasMasterKey()) {
+            return { status: 'missing' };
+        }
         const bytes = getMasterKeyBytes();
         const key = process.env.MASTER_KEY?.trim() || '';
         const isHex = /^[0-9a-fA-F]{64}$/.test(key);
 
         return {
+            status: 'present',
             length: bytes.length,
             derivation: isHex ? 'hex-decode' : 'sha256',
             isInsecureDefault: key === INSECURE_DEFAULT
         };
     } catch (error: any) {
         return {
+            status: 'error',
             error: error.message
         };
     }
 }
+

@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { createConnection, createAuthCode, getRegisteredClient } from '../services/auth';
 import { createLogger } from '../logger';
 import { configSchema } from './well-known';
+import { hasMasterKey } from '../utils/masterKey';
 
 const router = express.Router();
 const logger = createLogger('routes:connect');
@@ -38,7 +39,7 @@ const checkRateLimit = (req: Request): boolean => {
 
 
 
-const renderHtml = (error?: string, values?: any, query?: any) => {
+export const renderHtml = (error?: string, values?: any, query?: any) => {
     const safeQuery = query || {};
     // Ensure we preserve the query params for the form action or hidden fields
     const redirectUri = safeQuery.redirect_uri || '';
@@ -138,6 +139,9 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 router.post('/', async (req: Request, res: Response) => {
+    if (!hasMasterKey()) {
+        return res.status(400).send('Connection creation blocked: MASTER_KEY is missing.');
+    }
     if (!checkRateLimit(req)) {
         return res.status(429).send('Too many requests');
     }

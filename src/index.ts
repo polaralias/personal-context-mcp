@@ -13,6 +13,9 @@ import { startJobs } from './jobs';
 import prisma from './db';
 import { requestLogger } from './middleware/logger';
 import { createLogger, getRequestId } from './logger';
+import { hasMasterKey } from './utils/masterKey';
+import { renderHtml } from './routes/connect';
+import { createConnection } from './services/auth';
 
 const app = express();
 const swaggerDocument = YAML.load('./openapi.yaml');
@@ -25,10 +28,69 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Support form data
 app.use(requestLogger);
 
-// Serve static UI (Keep existing public folder for now, but connect overrides it if path matches)
+// Serve static UI
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'config.html'));
+
+// Root Route - Dashboard or OAuth Authorisation
+app.get('/', (req, res) => {
+  const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
+
+  // If request looks like an OAuth authorization request, render the connect UI
+  if (redirect_uri && state && code_challenge && code_challenge_method === 'S256') {
+    return res.send(renderHtml(undefined, undefined, req.query));
+  }
+
+  // Otherwise, serve the dashboard
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// API Config Status
+app.get('/api/config-status', (_req, res) => {
+  res.json({ status: hasMasterKey() ? 'present' : 'missing' });
+});
+
+// API Connections
+app.get('/api/connections', async (req, res) => {
+  try {
+    const connections = await prisma.connection.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    // Remove sensitive config before sending
+    const safeConnections = connections.map(c => {
+      const { configEncrypted, ...rest } = c;
+      return rest;
+    });
+    res.json(safeConnections);
+  } catch (error) {
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to list connections');
+    res.status(500).json({ error: 'failed_to_list_connections' });
+  }
+});
+
+app.post('/api/connections', async (req, res) => {
+  if (!hasMasterKey()) {
+    return res.status(400).json({ error: 'MASTER_KEY_MISSING', message: 'Connection creation blocked: MASTER_KEY is missing.' });
+  }
+
+  try {
+    const { displayName, config } = req.body;
+    const connection = await createConnection(displayName || 'New Connection', config || {});
+    const { configEncrypted, ...rest } = connection;
+    res.json(rest);
+  } catch (error) {
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to create connection');
+    res.status(500).json({ error: 'failed_to_create_connection' });
+  }
+});
+
+// API Sessions (Thin adapter for token generation or simplified auth)
+app.post('/api/sessions', async (_req, res) => {
+  if (!hasMasterKey()) {
+    return res.status(400).json({ error: 'MASTER_KEY_MISSING', message: 'Session generation blocked: MASTER_KEY is missing.' });
+  }
+  // This is a thin adapter. For now, we return 501 as we prefer the OAuth flow for sessions.
+  // But to satisfy the "frontend expects these" rule, we add it. 
+  res.status(501).json({ error: 'not_implemented', message: 'Use the official OAuth /connect flow.' });
 });
 
 // New Auth Routes
