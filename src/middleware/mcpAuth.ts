@@ -13,6 +13,24 @@ declare global {
     }
 }
 
+const getBaseUrl = (req: Request): string => {
+    if (process.env.BASE_URL) return process.env.BASE_URL;
+
+    const protocol = req.protocol || 'http';
+    const host = req.get('host') || req.headers.host || 'localhost';
+    return `${protocol}://${host}`;
+};
+
+const setOauthDiscoveryHeader = (req: Request, res: Response) => {
+    const baseUrl = getBaseUrl(req);
+    res.set('WWW-Authenticate', `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`);
+};
+
+const unauthorized = (req: Request, res: Response, error: string) => {
+    setOauthDiscoveryHeader(req, res);
+    return res.status(401).json({ error });
+};
+
 export const authenticateMcp = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const apiKeyHeader = req.headers['x-api-key'] as string;
@@ -25,14 +43,14 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
 
         if (!connectionId) {
             logger.warn({ ip: req.ip }, 'Invalid Bearer token');
-            return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+            return unauthorized(req, res, 'Unauthorized: Invalid token');
         }
 
         try {
             const connection = await getConnection(connectionId);
             if (!connection) {
                 logger.warn({ ip: req.ip, connectionId }, 'Connection not found for token');
-                return res.status(401).json({ error: 'Unauthorized: Connection not found' });
+                return unauthorized(req, res, 'Unauthorized: Connection not found');
             }
 
             const config = decryptConfig(connection.configEncrypted);
@@ -53,11 +71,11 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
             return next();
         } else {
             logger.warn({ ip: req.ip }, 'Invalid API key provided');
-            return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+            return unauthorized(req, res, 'Unauthorized: Invalid API key');
         }
     }
 
     // 3. No auth provided
     logger.warn({ ip: req.ip }, 'Missing authentication credentials');
-    return res.status(401).json({ error: 'Unauthorized: Authentication required (Bearer token or x-api-key)' });
+    return unauthorized(req, res, 'Unauthorized: Authentication required (Bearer token or x-api-key)');
 };

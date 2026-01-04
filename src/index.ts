@@ -22,7 +22,7 @@ const swaggerDocument = YAML.load('./openapi.yaml');
 const port = process.env.PORT || 3000;
 const logger = createLogger('server');
 
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Support form data

@@ -35,6 +35,7 @@ describe('MCP Dual Auth Integration Tests', () => {
         vi.clearAllMocks();
         delete process.env.MCP_API_KEY;
         delete process.env.MCP_API_KEYS;
+        process.env.BASE_URL = 'http://localhost:3000';
     });
 
     describe('POST /mcp', () => {
@@ -130,6 +131,41 @@ describe('MCP Dual Auth Integration Tests', () => {
             // Since Bearer is present but invalid, it should fail before checking API key
             expect(res.status).toBe(401);
             expect(res.body.error).toContain('Invalid token');
+        });
+
+        describe('OAuth Discovery Header', () => {
+            it('should include WWW-Authenticate header on 401 when no auth provided', async () => {
+                const res = await request(app)
+                    .post('/mcp')
+                    .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
+
+                expect(res.status).toBe(401);
+                expect(res.headers['www-authenticate']).toContain('Bearer resource_metadata=');
+                expect(res.headers['www-authenticate']).toContain('/.well-known/oauth-protected-resource');
+            });
+
+            it('should respect X-Forwarded-Proto for discovery URL', async () => {
+                const res = await request(app)
+                    .post('/mcp')
+                    .set('X-Forwarded-For', '1.2.3.4')
+                    .set('X-Forwarded-Proto', 'https')
+                    .set('X-Forwarded-Host', 'mcp.example.com')
+                    .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
+
+                expect(res.status).toBe(401);
+                expect(res.headers['www-authenticate']).toBe('Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"');
+            });
+
+            it('should use BASE_URL if set', async () => {
+                process.env.BASE_URL = 'https://custom.domain.com';
+                const res = await request(app)
+                    .post('/mcp')
+                    .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
+
+                expect(res.status).toBe(401);
+                expect(res.headers['www-authenticate']).toBe('Bearer resource_metadata="https://custom.domain.com/.well-known/oauth-protected-resource"');
+                delete process.env.BASE_URL;
+            });
         });
     });
 });
