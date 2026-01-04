@@ -86,7 +86,20 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     if (!validateRedirectUris(redirect_uris)) {
-        return res.status(400).json({ error: 'invalid_redirect_uri', error_description: 'One or more redirect URIs are invalid or not allowed' });
+        // B4: Rejection logging
+        logger.warn({
+            event: 'redirect_uri_rejected',
+            rejected_uris: redirect_uris,
+            client_name,
+            path: '/register',
+            ip: req.ip
+        }, 'Redirect URI rejected by allowlist');
+
+        // B5: User-facing error message
+        return res.status(400).json({
+            error: 'invalid_redirect_uri',
+            error_description: "This client isn't in the redirect allow list - raise an issue on GitHub for it to be added"
+        });
     }
 
     try {

@@ -120,7 +120,15 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     if (!redirect_uri || typeof redirect_uri !== 'string' || !registeredClient.redirectUris.includes(redirect_uri)) {
-        return res.status(400).send('Invalid or missing redirect_uri');
+        logger.warn({
+            event: 'redirect_uri_rejected',
+            rejected_uri: redirect_uri,
+            allowed_uris: registeredClient.redirectUris,
+            client_id,
+            path: '/connect',
+            ip: req.ip
+        }, 'Redirect URI rejected: not registered for this client');
+        return res.status(400).send("This client isn't in the redirect allow list - raise an issue on GitHub for it to be added");
     }
 
     if (!state || typeof state !== 'string') {
@@ -158,7 +166,15 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     if (!redirect_uri || !registeredClient.redirectUris.includes(redirect_uri)) {
-        return res.status(400).send('Invalid redirect_uri');
+        logger.warn({
+            event: 'redirect_uri_rejected',
+            rejected_uri: redirect_uri,
+            allowed_uris: registeredClient.redirectUris,
+            client_id,
+            path: '/connect',
+            ip: req.ip
+        }, 'Redirect URI rejected: not registered for this client');
+        return res.status(400).send("This client isn't in the redirect allow list - raise an issue on GitHub for it to be added");
     }
     if (code_challenge_method !== 'S256') {
         return res.status(400).send('Invalid code_challenge_method');

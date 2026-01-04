@@ -33,7 +33,15 @@ export const configSchema = {
 
 const getBaseUrl = (req: Request): string => {
     if (process.env.BASE_URL) {
-        return process.env.BASE_URL;
+        let url = process.env.BASE_URL;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            // Hardening: If BASE_URL is set but missing scheme, warn and normalize
+            // Using console.warn as logger might not be imported here, or import it if needed.
+            // But to be minimal and safe:
+            console.warn(`[WARN] BASE_URL '${url}' is missing scheme. Defaulting to https://.`);
+            url = `https://${url}`;
+        }
+        return url.replace(/\/$/, ''); // Ensure no trailing slash
     }
 
     // Express 'trust proxy' is enabled in index.ts, so req.protocol and req.get('host')

@@ -14,9 +14,10 @@ services:
       # Generate with: openssl rand -hex 32
       - MASTER_KEY=insecure-master-key-must-be-32-bytes-long
       # REDIRECT_URI_ALLOWLIST: Comma-separated list of allowed redirect URIs.
-      - REDIRECT_URI_ALLOWLIST=http://localhost:3010
-      # Optional: Set mode to 'exact' (default) or 'prefix'
-      # - REDIRECT_URI_ALLOWLIST_MODE=exact
+      # Default prefixes for ChatGPT, OpenAI, and local development.
+      - REDIRECT_URI_ALLOWLIST=https://chatgpt.com/,https://chat.openai.com/,http://localhost:3010/,http://localhost:3000/
+      # Optional: Set mode to 'exact' or 'prefix' (default)
+      - REDIRECT_URI_ALLOWLIST_MODE=prefix
       # Optional TTL overrides
       # - CODE_TTL_SECONDS=300
       # - TOKEN_TTL_SECONDS=3600
