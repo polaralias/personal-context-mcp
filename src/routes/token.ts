@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { findAndValidateAuthCode, markAuthCodeUsed, signToken, verifyPkce } from '../services/auth';
+import { findAndValidateAuthCode, markAuthCodeUsed, signToken, verifyPkce, getRegisteredClient } from '../services/auth';
 import { createLogger } from '../logger';
 
 const router = express.Router();
@@ -41,17 +41,32 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // Support JSON and URL-encoded
-    const { grant_type, code, code_verifier, redirect_uri } = req.body;
+    const { grant_type, code, code_verifier, redirect_uri, client_id, client_secret } = req.body;
 
     if (grant_type !== 'authorization_code') {
         return res.status(400).json({ error: 'unsupported_grant_type' });
     }
 
-    if (!code || !code_verifier || !redirect_uri) {
+    if (!code || !code_verifier || !redirect_uri || !client_id) {
         return res.status(400).json({ error: 'invalid_request', error_description: 'Missing required parameters' });
     }
 
     try {
+        const registeredClient = await getRegisteredClient(client_id);
+        if (!registeredClient) {
+            return res.status(400).json({ error: 'invalid_client', error_description: 'Invalid client_id' });
+        }
+
+        // ChatGPT uses "none" (public client)
+        if (registeredClient.tokenEndpointAuthMethod !== 'none') {
+            // If we wanted to support confidential clients, we would check client_secret here.
+            // For now, if it's not "none", we require a secret (but DCR defaults to none).
+            if (!client_secret) {
+                return res.status(401).json({ error: 'invalid_client', error_description: 'Client secret required for this client' });
+            }
+            // Simple secret check (if we stored it) - but we don't store it yet.
+        }
+
         const authCode = await findAndValidateAuthCode(code);
 
         if (!authCode) {

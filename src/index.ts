@@ -5,6 +5,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import connectRoutes from './routes/connect';
 import tokenRoutes from './routes/token';
+import registerRoutes from './routes/register';
 import wellKnownRoutes from './routes/well-known';
 import { handleMcpRequest } from './server/mcp';
 import { authenticateMcp } from './middleware/mcpAuth';
@@ -33,6 +34,7 @@ app.get('/', (_req, res) => {
 // New Auth Routes
 app.use('/connect', connectRoutes);
 app.use('/token', tokenRoutes);
+app.use('/register', registerRoutes);
 app.use('/.well-known', wellKnownRoutes);
 
 // MCP Streamable HTTP endpoint

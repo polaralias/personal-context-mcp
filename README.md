@@ -7,6 +7,7 @@ An MCP server that aggregates user status signals (location, calendar) and expos
 - **Status Aggregation:** Combines location and calendar data to determine current user status.
 - **MCP Protocol:** Implements `StreamableHTTPServerTransport` at `/mcp`.
 - **OAuth 2.0:** Secure authentication with Authorization Code Flow + PKCE.
+- **Dynamic Client Registration:** Supports RFC 7591 for compatibility with clients like ChatGPT.
 - **Connect UI:** User-friendly configuration UI at `/connect`.
 
 ## Configuration
@@ -35,14 +36,87 @@ The server is configured via environment variables.
 *   `GOOGLE_API_KEY`: API Key for Google services (can be set here or via UI).
 *   `GOOGLE_POLL_CRON`: Cron schedule for polling Google (default: `0 0 * * *`).
 *   `PORT`: Server port (default: 3000).
+*   `MCP_API_KEY`: A single API key for simple header/query auth.
+*   `MCP_API_KEYS`: Comma-separated list of additional valid API keys.
+
+## Authentication
+
+The server supports two authentication methods for the `/mcp` endpoint:
+
+### 1. OAuth 2.0 (Bearer Token)
+Standard OAuth 2.0 Authorization Code Flow + PKCE. Use the `/connect` UI to generate a connection and obtain a token via the `/token` endpoint.
+
+**Header:** `Authorization: Bearer <access_token>`
+
+### 2. API Key (Fallback)
+A simple API key method for clients that do not support OAuth flows.
+
+**Header:** `x-api-key: <api_key>`
+**Query Param:** `?apiKey=<api_key>`
+
+#### Examples
+
+**Using curl (Header):**
+```bash
+curl -X POST http://localhost:3010/mcp \
+  -H "x-api-key: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+```
+
+**Using curl (Query Param):**
+```bash
+curl -X POST "http://localhost:3010/mcp?apiKey=your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+```
+
+**Using PowerShell:**
+```powershell
+$body = @{
+    jsonrpc = "2.0"
+    method = "tools/list"
+    id = 1
+} | ConvertTo-Json
+
+Invoke-WebRequest -Uri "http://localhost:3010/mcp" -Method Post -Body $body -ContentType "application/json" -Headers @{ "x-api-key" = "your-api-key" }
+```
 
 ## OAuth Discovery
 
 The server exposes standard OAuth 2.0 discovery endpoints:
 
 *   `GET /.well-known/oauth-protected-resource`: Identifies the resource and authorization server.
-*   `GET /.well-known/oauth-authorization-server`: Advertises endpoints and supported methods.
+*   `GET /.well-known/oauth-authorization-server`: Advertises endpoints and supported methods. Included `registration_endpoint` for DCR.
 *   `GET /.well-known/mcp-config`: Standardized configuration schema.
+
+## Dynamic Client Registration (RFC 7591)
+
+The server supports RFC 7591 Dynamic Client Registration, allowing clients like ChatGPT to self-register.
+
+### Verification
+
+1.  **Check Metadata:** `GET /.well-known/oauth-authorization-server` should contain `"registration_endpoint": "https://<your-domain>/register"`.
+2.  **Test Registration:**
+    ```bash
+    curl -X POST https://<your-domain>/register \
+      -H "Content-Type: application/json" \
+      -d '{
+        "redirect_uris": ["https://<your-domain>/callback"],
+        "client_name": "Test Client"
+      }'
+    ```
+    Should return a `client_id`.
+
+## Smoke Test (DCR + OAuth)
+
+A comprehensive smoke test for DCR and OAuth is available at `scripts/dcr-smoke-test.ps1`. This script simulates the full flow required by ChatGPT.
+
+1.  Run `scripts/dcr-smoke-test.ps1`.
+2.  Provide your server's Base URL (e.g., `http://localhost:3010`).
+3.  The script will register a new client and provide an authorization URL.
+4.  Open the URL in your browser, complete the setup, and copy the resulting `code`.
+5.  Paste the `code` back into the script to complete the token exchange and verify `/mcp` access.
 
 ## Smoke Test
 

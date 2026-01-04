@@ -117,6 +117,32 @@ export const verifyToken = (token: string): string | null => {
     }
 };
 
+// --- API Key Helpers ---
+
+export const validateApiKey = (apiKey: string): boolean => {
+    const keys: string[] = [];
+    if (process.env.MCP_API_KEY) {
+        keys.push(process.env.MCP_API_KEY);
+    }
+    if (process.env.MCP_API_KEYS) {
+        keys.push(...process.env.MCP_API_KEYS.split(',').map(k => k.trim()));
+    }
+
+    if (keys.length === 0) return false;
+
+    // Use timingSafeEqual to prevent timing attacks
+    const providedKey = Buffer.from(apiKey);
+
+    for (const key of keys) {
+        const storedKey = Buffer.from(key);
+        if (providedKey.length === storedKey.length && crypto.timingSafeEqual(providedKey, storedKey)) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
 // --- DB Operations ---
 
 export const createConnection = async (displayName: string | null, config: any) => {
@@ -179,5 +205,33 @@ export const markAuthCodeUsed = async (id: number) => {
 export const getConnection = async (connectionId: string) => {
     return prisma.connection.findUnique({
         where: { id: connectionId }
+    });
+};
+
+// --- Registered Client Operations ---
+
+export const createRegisteredClient = async (data: {
+    clientName?: string;
+    redirectUris: string[];
+    tokenEndpointAuthMethod?: string;
+    grantTypes?: string[];
+    responseTypes?: string[];
+    scope?: string;
+}) => {
+    return prisma.registeredClient.create({
+        data: {
+            clientName: data.clientName,
+            redirectUris: data.redirectUris,
+            tokenEndpointAuthMethod: data.tokenEndpointAuthMethod || 'none',
+            grantTypes: data.grantTypes || ['authorization_code'],
+            responseTypes: data.responseTypes || ['code'],
+            scope: data.scope
+        }
+    });
+};
+
+export const getRegisteredClient = async (clientId: string) => {
+    return prisma.registeredClient.findUnique({
+        where: { id: clientId }
     });
 };

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { createConnection, createAuthCode } from '../services/auth';
+import { createConnection, createAuthCode, getRegisteredClient } from '../services/auth';
 import { createLogger } from '../logger';
 import { configSchema } from './well-known';
 
@@ -35,37 +35,14 @@ const checkRateLimit = (req: Request): boolean => {
     return true;
 };
 
-// Redirect URI Validation Helper
-const validateRedirectUri = (uri: string): boolean => {
-    if (!uri) return false;
 
-    // Check if absolute URL
-    try {
-        const parsed = new URL(uri);
-        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-            return false;
-        }
-    } catch {
-        return false;
-    }
-
-    const allowListStr = process.env.REDIRECT_URI_ALLOWLIST || '';
-    const allowList = allowListStr.split(',').map(u => u.trim()).filter(u => u.length > 0);
-    const mode = process.env.REDIRECT_URI_ALLOWLIST_MODE || 'exact';
-
-    if (mode === 'prefix') {
-        return allowList.some(allowed => uri.startsWith(allowed));
-    }
-
-    // Default to exact
-    return allowList.includes(uri);
-};
 
 
 const renderHtml = (error?: string, values?: any, query?: any) => {
     const safeQuery = query || {};
     // Ensure we preserve the query params for the form action or hidden fields
     const redirectUri = safeQuery.redirect_uri || '';
+    const clientId = safeQuery.client_id || '';
     const state = safeQuery.state || '';
     const codeChallenge = safeQuery.code_challenge || '';
     const codeChallengeMethod = safeQuery.code_challenge_method || '';
@@ -93,6 +70,7 @@ const renderHtml = (error?: string, values?: any, query?: any) => {
 
             <form action="/connect" method="POST" class="space-y-4">
                 <input type="hidden" name="redirect_uri" value="${redirectUri}">
+                <input type="hidden" name="client_id" value="${clientId}">
                 <input type="hidden" name="state" value="${state}">
                 <input type="hidden" name="code_challenge" value="${codeChallenge}">
                 <input type="hidden" name="code_challenge_method" value="${codeChallengeMethod}">
@@ -128,10 +106,19 @@ const renderHtml = (error?: string, values?: any, query?: any) => {
     `;
 };
 
-router.get('/', (req: Request, res: Response) => {
-    const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
+router.get('/', async (req: Request, res: Response) => {
+    const { client_id, redirect_uri, state, code_challenge, code_challenge_method } = req.query;
 
-    if (!redirect_uri || typeof redirect_uri !== 'string' || !validateRedirectUri(redirect_uri)) {
+    if (!client_id || typeof client_id !== 'string') {
+        return res.status(400).send('Missing client_id');
+    }
+
+    const registeredClient = await getRegisteredClient(client_id);
+    if (!registeredClient) {
+        return res.status(400).send('Invalid client_id');
+    }
+
+    if (!redirect_uri || typeof redirect_uri !== 'string' || !registeredClient.redirectUris.includes(redirect_uri)) {
         return res.status(400).send('Invalid or missing redirect_uri');
     }
 
@@ -152,13 +139,21 @@ router.get('/', (req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
     if (!checkRateLimit(req)) {
-         return res.status(429).send('Too many requests');
+        return res.status(429).send('Too many requests');
     }
 
-    const { redirect_uri, state, code_challenge, code_challenge_method, ...config } = req.body;
+    const { client_id, redirect_uri, state, code_challenge, code_challenge_method, ...config } = req.body;
 
     // Re-validate params (security best practice)
-    if (!redirect_uri || !validateRedirectUri(redirect_uri)) {
+    if (!client_id) {
+        return res.status(400).send('Missing client_id');
+    }
+    const registeredClient = await getRegisteredClient(client_id);
+    if (!registeredClient) {
+        return res.status(400).send('Invalid client_id');
+    }
+
+    if (!redirect_uri || !registeredClient.redirectUris.includes(redirect_uri)) {
         return res.status(400).send('Invalid redirect_uri');
     }
     if (code_challenge_method !== 'S256') {
@@ -172,7 +167,7 @@ router.post('/', async (req: Request, res: Response) => {
         let displayName = "Connection";
         const nameField = configSchema.fields.find(f => f.key === 'displayName');
         if (nameField && config[nameField.key]) {
-             displayName = config[nameField.key];
+            displayName = config[nameField.key];
         }
 
         for (const field of configSchema.fields) {

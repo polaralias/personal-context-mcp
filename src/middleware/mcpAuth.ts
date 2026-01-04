@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../logger';
-import { verifyToken, getConnection, decryptConfig } from '../services/auth';
+import { verifyToken, getConnection, decryptConfig, validateApiKey } from '../services/auth';
 
 const logger = createLogger('middleware:mcpAuth');
 
@@ -14,36 +14,50 @@ declare global {
 }
 
 export const authenticateMcp = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
+    const authHeader = req.headers['authorization'];
+    const apiKeyHeader = req.headers['x-api-key'] as string;
+    const apiKeyQuery = req.query.apiKey as string;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.warn({ ip: req.ip }, 'Missing or invalid Authorization header');
-      return res.status(401).json({ error: 'Unauthorized' });
-  }
+    // 1. Check for Bearer Token
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        const connectionId = verifyToken(token);
 
-  const token = authHeader.slice(7);
+        if (!connectionId) {
+            logger.warn({ ip: req.ip }, 'Invalid Bearer token');
+            return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+        }
 
-  // Verify JWT
-  const connectionId = verifyToken(token);
-  if (!connectionId) {
-      logger.warn({ ip: req.ip }, 'Invalid token');
-      return res.status(401).json({ error: 'Unauthorized' });
-  }
+        try {
+            const connection = await getConnection(connectionId);
+            if (!connection) {
+                logger.warn({ ip: req.ip, connectionId }, 'Connection not found for token');
+                return res.status(401).json({ error: 'Unauthorized: Connection not found' });
+            }
 
-  try {
-      const connection = await getConnection(connectionId);
-      if (!connection) {
-          logger.warn({ ip: req.ip, connectionId }, 'Connection not found');
-          return res.status(401).json({ error: 'Unauthorized' });
-      }
+            const config = decryptConfig(connection.configEncrypted);
+            req.mcpConfig = config;
+            return next();
+        } catch (error) {
+            logger.error({ err: error }, 'Error authenticating with Bearer token');
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
 
-      // Decrypt config and attach
-      const config = decryptConfig(connection.configEncrypted);
-      req.mcpConfig = config;
+    // 2. Check for API Key
+    const providedApiKey = apiKeyHeader || apiKeyQuery;
+    if (providedApiKey) {
+        if (validateApiKey(providedApiKey)) {
+            // API key is valid. Set default empty config if connection-specific config is not applicable.
+            req.mcpConfig = {};
+            return next();
+        } else {
+            logger.warn({ ip: req.ip }, 'Invalid API key provided');
+            return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+        }
+    }
 
-      next();
-  } catch (error) {
-      logger.error({ err: error }, 'Error authenticating MCP request');
-      return res.status(500).json({ error: 'Internal Server Error' });
-  }
+    // 3. No auth provided
+    logger.warn({ ip: req.ip }, 'Missing authentication credentials');
+    return res.status(401).json({ error: 'Unauthorized: Authentication required (Bearer token or x-api-key)' });
 };

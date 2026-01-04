@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model WorkStatusEvent {
@@ -83,4 +84,18 @@ model AuthCode {
 
   @@map("auth_codes")
   @@index([codeHash])
+}
+
+model RegisteredClient {
+  id                      String   @id @default(uuid())
+  clientName              String?  @map("client_name")
+  redirectUris           String[] @map("redirect_uris")
+  tokenEndpointAuthMethod String   @default("none") @map("token_endpoint_auth_method")
+  grantTypes              String[] @map("grant_types")
+  responseTypes           String[] @map("response_types")
+  scope                   String?
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("registered_clients")
 }
