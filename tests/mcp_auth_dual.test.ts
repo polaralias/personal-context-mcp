@@ -20,6 +20,14 @@ vi.mock('../src/services/auth', async () => {
     };
 });
 
+vi.mock('@prisma/client', () => {
+    return {
+        PrismaClient: class {
+            $queryRaw = vi.fn().mockResolvedValue([1]);
+        },
+    };
+});
+
 import app from '../src/index';
 
 describe('MCP Dual Auth Integration Tests', () => {

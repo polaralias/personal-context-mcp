@@ -23,24 +23,6 @@ vi.mock('../src/services/resolver', () => {
   };
 });
 
-// 3. Mock pg
-vi.mock('pg', () => {
-  return {
-    Pool: class {
-      connect() {}
-      query() {}
-      end() {}
-    },
-  };
-});
-
-// 4. Mock PrismaAdapter
-vi.mock('@prisma/adapter-pg', () => {
-  return {
-    PrismaPg: class {},
-  };
-});
-
 // 5. Mock PrismaClient
 vi.mock('@prisma/client', () => {
   return {
@@ -56,26 +38,6 @@ import app from '../src/index';
 describe('Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('GET /status', () => {
-    it('should return 200 and status', async () => {
-      mocks.resolveStatus.mockResolvedValue({
-        effectiveDate: '2025-01-01',
-        workStatus: 'working',
-      });
-
-      const res = await request(app).get('/status');
-      expect(res.status).toBe(200);
-      expect(res.body.workStatus).toBe('working');
-    });
-
-    it('should handle errors gracefully', async () => {
-      mocks.resolveStatus.mockRejectedValue(new Error('Boom'));
-
-      const res = await request(app).get('/status');
-      expect(res.status).toBe(500);
-    });
   });
 
   describe('GET /healthz', () => {

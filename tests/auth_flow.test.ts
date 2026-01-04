@@ -24,22 +24,7 @@ vi.mock('../src/services/auth', () => {
     };
 });
 
-vi.mock('pg', () => {
-    return {
-        Pool: class {
-            connect() { }
-            query() { }
-            end() { }
-        },
-    };
-});
-
-vi.mock('@prisma/adapter-pg', () => {
-    return {
-        PrismaPg: class { },
-    };
-});
-
+// 5. Mock PrismaClient
 vi.mock('@prisma/client', () => {
     return {
         PrismaClient: class {
