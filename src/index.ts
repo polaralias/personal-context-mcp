@@ -15,7 +15,7 @@ import { requestLogger } from './middleware/logger';
 import { createLogger, getRequestId } from './logger';
 import { hasMasterKey } from './utils/masterKey';
 import { renderHtml } from './routes/connect';
-import { createConnection } from './services/auth';
+import { createConnection, getConnection, signToken } from './services/auth';
 
 const app = express();
 const swaggerDocument = YAML.load('./openapi.yaml');
@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true })); // Support form data
 app.use(requestLogger);
 
 // Serve static UI
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Root Route - Dashboard or OAuth Authorisation
 app.get('/', (req, res) => {
@@ -67,6 +67,20 @@ app.get('/api/connections', async (req, res) => {
   }
 });
 
+app.get('/api/connections/:id', async (req, res) => {
+  try {
+    const connection = await getConnection(req.params.id);
+    if (!connection) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+    const { configEncrypted, ...rest } = connection;
+    res.json(rest);
+  } catch (error) {
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to get connection');
+    res.status(500).json({ error: 'failed_to_get_connection' });
+  }
+});
+
 app.post('/api/connections', async (req, res) => {
   if (!hasMasterKey()) {
     return res.status(400).json({ error: 'MASTER_KEY_MISSING', message: 'Connection creation blocked: MASTER_KEY is missing.' });
@@ -83,14 +97,29 @@ app.post('/api/connections', async (req, res) => {
   }
 });
 
-// API Sessions (Thin adapter for token generation or simplified auth)
-app.post('/api/sessions', async (_req, res) => {
+// API Sessions
+app.post('/api/sessions', async (req, res) => {
   if (!hasMasterKey()) {
     return res.status(400).json({ error: 'MASTER_KEY_MISSING', message: 'Session generation blocked: MASTER_KEY is missing.' });
   }
-  // This is a thin adapter. For now, we return 501 as we prefer the OAuth flow for sessions.
-  // But to satisfy the "frontend expects these" rule, we add it. 
-  res.status(501).json({ error: 'not_implemented', message: 'Use the official OAuth /connect flow.' });
+
+  try {
+    const { connectionId } = req.body;
+    if (!connectionId) {
+      return res.status(400).json({ error: 'connection_id_required' });
+    }
+
+    const connection = await getConnection(connectionId);
+    if (!connection) {
+      return res.status(404).json({ error: 'connection_not_found' });
+    }
+
+    const token = signToken(connectionId);
+    res.json({ accessToken: token });
+  } catch (error) {
+    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to create session');
+    res.status(500).json({ error: 'failed_to_create_session' });
+  }
 });
 
 // New Auth Routes
