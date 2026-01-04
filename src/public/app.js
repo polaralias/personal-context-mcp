@@ -1,152 +1,176 @@
+const API_BASE = '/api';
+
+let currentConnectionId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-    const app = {
-        init() {
-            this.cacheDOM();
-            this.bindEvents();
-            this.checkConfigStatus();
-            this.loadConnections();
-            this.handleNavigation();
-        },
+    fetchConfigStatus();
+    loadConnections();
+});
 
-        cacheDOM() {
-            this.statusBanner = document.getElementById('status-banner');
-            this.statusText = document.getElementById('status-text');
-            this.connectionsList = document.getElementById('connections-list');
-            this.connectionForm = document.getElementById('connection-form');
-            this.viewDashboard = document.getElementById('view-dashboard');
-            this.viewCreate = document.getElementById('view-create');
-            this.viewDetail = document.getElementById('view-detail');
-            this.detailContent = document.getElementById('detail-content');
-            this.btnCreate = document.getElementById('btn-create');
-            this.btnBack = document.querySelectorAll('.btn-back');
-        },
+// 1. Check if MASTER_KEY is configured on the server
+async function fetchConfigStatus() {
+    const banner = document.getElementById('config-status-banner');
+    const title = document.getElementById('status-title');
+    const message = document.getElementById('status-message');
+    const guidance = document.getElementById('status-guidance');
 
-        bindEvents() {
-            this.btnCreate.addEventListener('click', () => this.showView('create'));
-            this.btnBack.forEach(btn => btn.addEventListener('click', () => this.showView('dashboard')));
-            this.connectionForm.addEventListener('submit', (e) => this.handleCreateConnection(e));
-        },
+    try {
+        const res = await fetch(`${API_BASE}/config-status`);
+        const data = await res.json();
 
-        async checkConfigStatus() {
-            try {
-                const res = await fetch('/api/config-status');
-                const data = await res.json();
-                if (data.status === 'missing') {
-                    this.statusBanner.classList.remove('hidden');
-                    this.statusBanner.classList.add('bg-red-500');
-                    this.statusText.textContent = 'MASTER_KEY is missing. Connection creation is disabled.';
-                } else {
-                    this.statusBanner.classList.add('hidden');
-                }
-            } catch (err) {
-                console.error('Failed to fetch config status', err);
-            }
-        },
+        banner.classList.remove('hidden');
 
-        async loadConnections() {
-            try {
-                const res = await fetch('/api/connections');
-                const connections = await res.json();
-                this.renderConnections(connections);
-            } catch (err) {
-                console.error('Failed to load connections', err);
-            }
-        },
-
-        renderConnections(connections) {
-            this.connectionsList.innerHTML = '';
-            if (connections.length === 0) {
-                this.connectionsList.innerHTML = '<p class="text-gray-500 italic">No connections found.</p>';
-                return;
-            }
-
-            connections.forEach(conn => {
-                const card = document.createElement('div');
-                card.className = 'bg-white p-4 rounded-lg shadow border border-gray-200 hover:border-blue-400 transition cursor-pointer';
-                card.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h3 class="font-bold text-lg text-gray-800">${conn.displayName || 'Unnamed Connection'}</h3>
-                            <p class="text-xs text-gray-500 font-mono">${conn.id}</p>
-                        </div>
-                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">Active</span>
-                    </div>
-                `;
-                card.addEventListener('click', () => this.showDetail(conn));
-                this.connectionsList.appendChild(card);
-            });
-        },
-
-        async handleCreateConnection(e) {
-            e.preventDefault();
-            const formData = new FormData(this.connectionForm);
-            const data = {
-                displayName: formData.get('displayName'),
-                config: JSON.parse(formData.get('config') || '{}')
-            };
-
-            try {
-                const res = await fetch('/api/connections', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                if (!res.ok) {
-                    const error = await res.json();
-                    alert('Error: ' + (error.error || 'Failed to create connection'));
-                    return;
-                }
-
-                this.connectionForm.reset();
-                this.showView('dashboard');
-                this.loadConnections();
-            } catch (err) {
-                alert('Connection error');
-            }
-        },
-
-        showDetail(conn) {
-            this.detailContent.innerHTML = `
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-600">ID</label>
-                        <p class="font-mono bg-gray-50 p-2 rounded border text-sm">${conn.id}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-600">Display Name</label>
-                        <p class="text-gray-800">${conn.displayName || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-600">Configuration (Encrypted)</label>
-                        <p class="text-xs text-gray-500 italic">Configuration details are stored securely and not displayed here.</p>
-                    </div>
-                </div>
-            `;
-            this.showView('detail');
-        },
-
-        showView(view) {
-            this.viewDashboard.classList.add('hidden');
-            this.viewCreate.classList.add('hidden');
-            this.viewDetail.classList.add('hidden');
-
-            if (view === 'dashboard') this.viewDashboard.classList.remove('hidden');
-            if (view === 'create') this.viewCreate.classList.remove('hidden');
-            if (view === 'detail') this.viewDetail.classList.remove('hidden');
-        },
-
-        handleNavigation() {
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('redirect_uri') && params.has('state')) {
-                // If OAuth params are present, we might want to redirect to the connect page
-                // OR render the connect UI here. The prompt says "render the existing connect/authorisation UI".
-                // We'll handle this in the server by sending a different HTML if these params are present, 
-                // OR we can handle it here by redirecting. 
-                // However, the server-side implementation is cleaner for "rendering the existing UI".
-            }
+        if (data.status === 'present') {
+            banner.className = 'mb-8 p-6 rounded-xl border-l-4 shadow-sm bg-green-50 border-green-500 text-green-900';
+            title.innerText = 'Server Securely Configured';
+            message.innerText = 'The system is ready. Your keys are encrypted with the Master Key.';
+            guidance.classList.add('hidden');
+        } else {
+            banner.className = 'mb-8 p-6 rounded-xl border-l-4 shadow-sm bg-red-50 border-red-500 text-red-900';
+            title.innerText = 'Configuration Required';
+            message.innerText = 'The MASTER_KEY environment variable is missing. Setup cannot proceed.';
+            guidance.classList.remove('hidden');
         }
+    } catch (e) {
+        console.error('Config fetch error', e);
+    }
+}
+
+// 2. Navigation
+function showCreate() {
+    document.getElementById('view-dashboard').classList.add('hidden');
+    document.getElementById('view-create').classList.remove('hidden');
+}
+
+function hideCreate() {
+    document.getElementById('view-create').classList.add('hidden');
+    document.getElementById('view-dashboard').classList.remove('hidden');
+}
+
+function hideDetail() {
+    document.getElementById('view-detail').classList.add('hidden');
+    document.getElementById('view-dashboard').classList.remove('hidden');
+    currentConnectionId = null;
+    document.getElementById('session-output').classList.add('hidden');
+}
+
+// 3. Load Connections from Backend
+async function loadConnections() {
+    const container = document.getElementById('list-container');
+    try {
+        const res = await fetch(`${API_BASE}/connections`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+            container.innerHTML = '<div class="text-center py-12 text-gray-500 italic">No active connections found.</div>';
+            return;
+        }
+
+        container.innerHTML = data.map(conn => `
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center transition hover:shadow-md">
+                <div>
+                    <h3 class="font-bold text-lg">${conn.displayName || conn.name || 'Unnamed Connection'}</h3>
+                    <span class="text-xs font-mono text-gray-400 uppercase tracking-widest">${conn.id.substring(0, 8)}</span>
+                </div>
+                <button onclick="viewConnection('${conn.id}')" class="text-indigo-600 font-bold hover:underline">Manage</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500">Failed to load connection data.</p>';
+    }
+}
+
+// View Connection Detail (Missing in prompt but required for UI)
+async function viewConnection(id) {
+    currentConnectionId = id;
+    const detailView = document.getElementById('view-detail');
+    const dashboardView = document.getElementById('view-dashboard');
+    const detailContent = document.getElementById('detail-content');
+
+    dashboardView.classList.add('hidden');
+    detailView.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`${API_BASE}/connections/${id}`);
+        const data = await res.json();
+
+        document.getElementById('detail-title').innerText = data.displayName || data.name || 'Connection Details';
+
+        // Render details
+        detailContent.innerHTML = Object.entries(data)
+            .filter(([k]) => k !== 'configEncrypted' && k !== 'config')
+            .map(([k, v]) => `
+                <div class="mb-2">
+                    <span class="font-semibold text-gray-500 block uppercase text-xs tracking-wider">${k}</span>
+                    <span class="font-mono text-gray-800 break-all">${v}</span>
+                </div>
+            `).join('');
+
+    } catch (e) {
+        detailContent.innerHTML = '<p class="text-red-500">Failed to load details</p>';
+    }
+}
+
+
+// 4. Save New Connection
+async function handleSave(event) {
+    event.preventDefault();
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    btn.innerText = 'Securing...';
+
+    const payload = {
+        displayName: document.getElementById('conn-name').value, // Matches backend expectation
+        config: { apiKey: document.getElementById('conn-apiKey').value }
     };
 
-    app.init();
-});
+    try {
+        const res = await fetch(`${API_BASE}/connections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        hideCreate();
+        loadConnections();
+    } catch (e) {
+        alert("Error: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Authorize Connection';
+    }
+}
+
+// 5. Generate Session Token
+async function createSession() {
+    if (!currentConnectionId) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connectionId: currentConnectionId })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+            alert("Error: " + (data.message || data.error));
+            return;
+        }
+
+        document.getElementById('session-output').classList.remove('hidden');
+        document.getElementById('token-display').innerText = data.accessToken;
+    } catch (e) {
+        alert("Failed to generate token");
+    }
+}
+
+// Helper: Copy to Clipboard
+function copyToken() {
+    const text = document.getElementById('token-display').innerText;
+    navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+}
