@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../logger';
 import { verifyToken, getConnection, decryptConfig, validateApiKey } from '../services/auth';
+import { mcpRateLimiter } from '../utils/rateLimit';
+import { ApiKeyService } from '../services/apiKeyService';
 
 const logger = createLogger('middleware:mcpAuth');
+const apiKeyService = ApiKeyService.getInstance();
 
 // Extend Request type to include mcpConfig
 declare global {
@@ -36,46 +39,71 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
     const apiKeyHeader = req.headers['x-api-key'] as string;
     const apiKeyQuery = req.query.apiKey as string;
 
-    // 1. Check for Bearer Token
+    let candidateKey: string | null = null;
+    let isBearer = false;
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.slice(7);
-        const connectionId = verifyToken(token);
-
-        if (!connectionId) {
-            logger.warn({ ip: req.ip }, 'Invalid Bearer token');
-            return unauthorized(req, res, 'Unauthorized: Invalid token');
-        }
-
-        try {
-            const connection = await getConnection(connectionId);
-            if (!connection) {
-                logger.warn({ ip: req.ip, connectionId }, 'Connection not found for token');
-                return unauthorized(req, res, 'Unauthorized: Connection not found');
-            }
-
-            const config = decryptConfig(connection.configEncrypted);
-            req.mcpConfig = config;
-            return next();
-        } catch (error) {
-            logger.error({ err: error }, 'Error authenticating with Bearer token');
-            return res.status(500).json({ error: 'Internal Server Error' });
-        }
+        candidateKey = authHeader.slice(7);
+        isBearer = true;
+    } else if (apiKeyHeader) {
+        candidateKey = apiKeyHeader;
+    } else if (apiKeyQuery) {
+        candidateKey = apiKeyQuery;
     }
 
-    // 2. Check for API Key
-    const providedApiKey = apiKeyHeader || apiKeyQuery;
-    if (providedApiKey) {
-        if (validateApiKey(providedApiKey)) {
-            // API key is valid. Set default empty config if connection-specific config is not applicable.
+    if (candidateKey) {
+        // 1. Check User Bound Key (sk_mcp_)
+        if (candidateKey.startsWith('sk_mcp_')) {
+            if (process.env.API_KEY_MODE === 'user_bound') {
+                if (!mcpRateLimiter.check(candidateKey)) {
+                    logger.warn({ ip: req.ip }, 'Rate limit exceeded for key');
+                    return res.status(429).json({ error: 'Too Many Requests' });
+                }
+
+                const result = await apiKeyService.validateKey(candidateKey, req.ip || 'unknown');
+                if (result) {
+                    req.mcpConfig = result.config;
+                    return next();
+                } else {
+                    // Invalid user key
+                    logger.warn({ ip: req.ip }, 'Invalid User-Bound API key');
+                    return unauthorized(req, res, 'Unauthorized: Invalid API key');
+                }
+            }
+        }
+
+        // 2. Check OAuth (Bearer only)
+        if (isBearer) {
+            const connectionId = verifyToken(candidateKey);
+            if (connectionId) {
+                try {
+                    const connection = await getConnection(connectionId);
+                    if (connection) {
+                        const config = decryptConfig(connection.configEncrypted);
+                        req.mcpConfig = config;
+                        return next();
+                    }
+                } catch (error) {
+                    logger.error({ err: error }, 'Error authenticating with Bearer token');
+                }
+            }
+        }
+
+        // 3. Check Global API Key (Fallback)
+        if (validateApiKey(candidateKey)) {
             req.mcpConfig = {};
             return next();
-        } else {
-            logger.warn({ ip: req.ip }, 'Invalid API key provided');
-            return unauthorized(req, res, 'Unauthorized: Invalid API key');
         }
     }
 
-    // 3. No auth provided
+    // No valid auth found
+    if (candidateKey) {
+        // We had a key but it failed all checks
+        logger.warn({ ip: req.ip }, 'Invalid authentication credentials');
+        return unauthorized(req, res, 'Unauthorized: Invalid credentials');
+    }
+
+    // No auth provided
     logger.warn({ ip: req.ip }, 'Missing authentication credentials');
     return unauthorized(req, res, 'Unauthorized: Authentication required (Bearer token or x-api-key)');
 };

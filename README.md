@@ -208,3 +208,43 @@ To verify the server is working correctly, you can run the provided PowerShell s
     *   Redirect URI: `https://mcp.yourdomain.com/connect`
 
 The script will exchange the code for a token and verify access to the `/mcp` endpoint.
+
+---
+
+## Self-Serve API Key Provisioning
+
+For clients that do not support OAuth, this server supports a self-serve API key provisioning flow.
+
+### Setup (Server Admin)
+
+1.  Set `API_KEY_MODE=user_bound` in your environment (e.g., in `docker-compose.yml`).
+2.  Ensure `MASTER_KEY` is set securely.
+3.  Run migrations: `npx prisma migrate dev`.
+
+### Usage (Client)
+
+1.  Navigate to the root URL of the MCP server in a browser (e.g., `http://localhost:3010/`).
+2.  Fill in the configuration form (e.g., Google Maps API Key, Home Location).
+3.  Click "Generate API Key".
+4.  Copy the API Key (starts with `sk_mcp_`).
+
+### Using the Key
+
+In your MCP client configuration, add the key as a header:
+
+**Option 1: Authorization Header (Preferred)**
+```
+Authorization: Bearer sk_mcp_...
+```
+
+**Option 2: X-API-Key Header**
+```
+X-API-Key: sk_mcp_...
+```
+
+The server will automatically load your specific configuration (e.g., your personal Google Maps key) for requests made with this key.
+
+### Key Management
+
+- **Revocation**: Send a POST request to `/api-keys/revoke` with the key in the Authorization header.
+- **Rate Limits**: Key issuance is limited (default 3/hour). usage is limited (default 60/min).

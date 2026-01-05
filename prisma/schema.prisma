@@ -99,3 +99,35 @@ model RegisteredClient {
 
   @@map("registered_clients")
 }
+
+model UserConfig {
+  id                String    @id @default(uuid())
+  serverId          String    @map("server_id")
+  configEnc         String    @map("config_enc") // Encrypted JSON blob
+  configFingerprint String?   @map("config_fingerprint")
+  displayName       String?   @map("display_name")
+  revokedAt         DateTime? @map("revoked_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  apiKeys           ApiKey[]
+
+  @@map("user_configs")
+  @@index([configFingerprint])
+}
+
+model ApiKey {
+  id             String      @id @default(uuid())
+  userConfigId   String      @map("user_config_id")
+  keyHash        String      @unique @map("key_hash")
+  createdIp      String?     @map("created_ip")
+  lastUsedIp     String?     @map("last_used_ip")
+  lastUsedAt     DateTime?   @map("last_used_at")
+  revokedAt      DateTime?   @map("revoked_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  
+  userConfig     UserConfig  @relation(fields: [userConfigId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+  @@index([keyHash])
+}

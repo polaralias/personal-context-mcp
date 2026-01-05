@@ -16,6 +16,7 @@ import { requestLogger } from './middleware/logger';
 import { createLogger, getRequestId } from './logger';
 import { hasMasterKey } from './utils/masterKey';
 import { renderHtml } from './routes/connect';
+import apiKeyRoutes from './routes/api-keys';
 import { createConnection, getConnection, signToken } from './services/auth';
 
 const app = express();
@@ -32,7 +33,7 @@ app.use(requestLogger);
 // Serve static UI
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// Root Route - Dashboard or OAuth Authorisation
+// Root Route - Dashboard or OAuth Authorisation or Provisioning
 app.get('/', (req, res) => {
   const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
 
@@ -41,9 +42,17 @@ app.get('/', (req, res) => {
     return res.send(renderHtml(undefined, undefined, req.query));
   }
 
+  // If API Key mode is user_bound, serve the provisioning page
+  if (process.env.API_KEY_MODE === 'user_bound') {
+    return res.sendFile(path.join(__dirname, 'public', 'provision.html'));
+  }
+
   // Otherwise, serve the dashboard
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// API config routes
+app.use('/api-keys', apiKeyRoutes);
 
 // API Config Status
 app.get('/api/config-status', (_req, res) => {
