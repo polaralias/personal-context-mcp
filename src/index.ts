@@ -18,6 +18,7 @@ import { hasMasterKey } from './utils/masterKey';
 import { renderHtml } from './routes/connect';
 import apiKeyRoutes from './routes/api-keys';
 import { createConnection, getConnection, signToken } from './services/auth';
+import { configFields } from './config/schema/personal-context';
 
 const app = express();
 const swaggerDocument = YAML.load('./openapi.yaml');
@@ -33,7 +34,27 @@ app.use(requestLogger);
 // Serve static UI
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// Root Route - Dashboard or OAuth Authorisation or Provisioning
+// ... existing code ...
+
+// API Config Status
+app.get('/api/master-key-status', (_req, res) => {
+  res.json({ configured: hasMasterKey() });
+});
+
+app.get('/api/config-status', (_req, res) => {
+  res.json({ status: hasMasterKey() ? 'present' : 'missing' });
+});
+
+// API Config Schema
+app.get('/api/config-schema', (_req, res) => {
+  res.json({ fields: configFields });
+});
+
+// API Keys - Alias for standardization
+app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api-keys', apiKeyRoutes);
+
+// Root Route - Dashboard or OAuth Authorisation
 app.get('/', (req, res) => {
   const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
 
@@ -42,21 +63,8 @@ app.get('/', (req, res) => {
     return res.send(renderHtml(undefined, undefined, req.query));
   }
 
-  // If API Key mode is user_bound, serve the provisioning page
-  if (process.env.API_KEY_MODE === 'user_bound') {
-    return res.sendFile(path.join(__dirname, 'public', 'provision.html'));
-  }
-
-  // Otherwise, serve the dashboard
+  // Otherwise, serve the dashboard (provisioning handled client-side now)
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// API config routes
-app.use('/api-keys', apiKeyRoutes);
-
-// API Config Status
-app.get('/api/config-status', (_req, res) => {
-  res.json({ status: hasMasterKey() ? 'present' : 'missing' });
 });
 
 // API Connections

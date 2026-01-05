@@ -1,176 +1,133 @@
-const API_BASE = '/api';
+const el = (id) => document.getElementById(id);
 
-let currentConnectionId = null;
+function show(id) {
+    ["view-dashboard", "view-provision"].forEach(v => el(v).classList.add("hidden"));
+    el(id).classList.remove("hidden");
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchConfigStatus();
-    loadConnections();
-});
+function setBanner(configured) {
+    const banner = el("masterKeyBanner");
+    const icon = el("masterKeyIcon");
+    const title = el("masterKeyTitle");
+    const body = el("masterKeyBody");
+    const snippet = el("masterKeySnippet");
 
-// 1. Check if MASTER_KEY is configured on the server
-async function fetchConfigStatus() {
-    const banner = document.getElementById('config-status-banner');
-    const title = document.getElementById('status-title');
-    const message = document.getElementById('status-message');
-    const guidance = document.getElementById('status-guidance');
+    banner.classList.remove("hidden");
 
-    try {
-        const res = await fetch(`${API_BASE}/config-status`);
-        const data = await res.json();
+    if (configured) {
+        icon.textContent = "✅";
+        title.textContent = "Server configured";
+        body.textContent = "MASTER_KEY is set. OAuth and API key provisioning are available.";
+        snippet.textContent = "";
+        snippet.classList.add("hidden");
+    } else {
+        icon.textContent = "❌";
+        title.textContent = "Setup required";
+        body.textContent = "Set MASTER_KEY to enable token signing/encryption and secure key issuance.";
+        snippet.textContent =
+            `Local:
+  export MASTER_KEY="your-long-random-secret"
 
-        banner.classList.remove('hidden');
+Docker Compose:
+  environment:
+    - MASTER_KEY=your-long-random-secret`;
+        snippet.classList.remove("hidden");
+    }
+}
 
-        if (data.status === 'present') {
-            banner.className = 'mb-8 p-6 rounded-xl border-l-4 shadow-sm bg-green-50 border-green-500 text-green-900';
-            title.innerText = 'Server Securely Configured';
-            message.innerText = 'The system is ready. Your keys are encrypted with the Master Key.';
-            guidance.classList.add('hidden');
-        } else {
-            banner.className = 'mb-8 p-6 rounded-xl border-l-4 shadow-sm bg-red-50 border-red-500 text-red-900';
-            title.innerText = 'Configuration Required';
-            message.innerText = 'The MASTER_KEY environment variable is missing. Setup cannot proceed.';
-            guidance.classList.remove('hidden');
+async function fetchJson(url, opts) {
+    const res = await fetch(url, opts);
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { }
+    if (!res.ok) throw new Error((data && (data.message || data.error)) || `HTTP ${res.status}`);
+    return data;
+}
+
+function buildForm(schema) {
+    const form = el("provisionForm");
+    form.innerHTML = "";
+
+    const fields = schema.fields || [];
+    for (const f of fields) {
+        const wrap = document.createElement("div");
+
+        const label = document.createElement("label");
+        label.className = "block text-sm font-medium text-gray-700 mb-1";
+        label.textContent = f.label || f.name;
+
+        const input = document.createElement("input");
+        input.name = f.name;
+        input.type = f.type || "text";
+        input.required = !!f.required;
+        input.className = "w-full px-3 py-2 rounded-lg border bg-white";
+        input.autocomplete = "off";
+
+        wrap.appendChild(label);
+        wrap.appendChild(input);
+        form.appendChild(wrap);
+    }
+}
+
+async function main() {
+    el("goProvision").addEventListener("click", async () => {
+        el("provisionError").classList.add("hidden");
+        el("provisionSuccess").classList.add("hidden");
+
+        const schema = await fetchJson("/api/config-schema");
+        buildForm(schema);
+        show("view-provision");
+    });
+
+    el("backToDashboard").addEventListener("click", () => show("view-dashboard"));
+
+    el("submitProvision").addEventListener("click", async (e) => {
+        e.preventDefault();
+        el("provisionError").classList.add("hidden");
+        el("provisionSuccess").classList.add("hidden");
+
+        const fd = new FormData(el("provisionForm"));
+        const payload = {};
+        for (const [k, v] of fd.entries()) payload[k] = v;
+
+        try {
+            // NOTE: Using the standardized path /api/api-keys here to match server plan
+            // The payload structure expects { config: { ... } } or flattened?
+            // Reviewing src/routes/api-keys.ts: "const config = req.body.config;"
+            // So we need to wrap the form data in a 'config' object.
+
+            const wrappedPayload = { config: payload };
+
+            const out = await fetchJson("/api/api-keys", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(wrappedPayload),
+            });
+
+            el("apiKeyOut").value = out.apiKey || "";
+            el("provisionSuccess").classList.remove("hidden");
+        } catch (err) {
+            el("provisionError").textContent = err.message || String(err);
+            el("provisionError").classList.remove("hidden");
         }
-    } catch (e) {
-        console.error('Config fetch error', e);
-    }
-}
+    });
 
-// 2. Navigation
-function showCreate() {
-    document.getElementById('view-dashboard').classList.add('hidden');
-    document.getElementById('view-create').classList.remove('hidden');
-}
+    el("copyKey").addEventListener("click", async () => {
+        const v = el("apiKeyOut").value;
+        if (!v) return;
+        await navigator.clipboard.writeText(v);
+    });
 
-function hideCreate() {
-    document.getElementById('view-create').classList.add('hidden');
-    document.getElementById('view-dashboard').classList.remove('hidden');
-}
-
-function hideDetail() {
-    document.getElementById('view-detail').classList.add('hidden');
-    document.getElementById('view-dashboard').classList.remove('hidden');
-    currentConnectionId = null;
-    document.getElementById('session-output').classList.add('hidden');
-}
-
-// 3. Load Connections from Backend
-async function loadConnections() {
-    const container = document.getElementById('list-container');
+    // Banner status
     try {
-        const res = await fetch(`${API_BASE}/connections`);
-        const data = await res.json();
-
-        if (data.length === 0) {
-            container.innerHTML = '<div class="text-center py-12 text-gray-500 italic">No active connections found.</div>';
-            return;
-        }
-
-        container.innerHTML = data.map(conn => `
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center transition hover:shadow-md">
-                <div>
-                    <h3 class="font-bold text-lg">${conn.displayName || conn.name || 'Unnamed Connection'}</h3>
-                    <span class="text-xs font-mono text-gray-400 uppercase tracking-widest">${conn.id.substring(0, 8)}</span>
-                </div>
-                <button onclick="viewConnection('${conn.id}')" class="text-indigo-600 font-bold hover:underline">Manage</button>
-            </div>
-        `).join('');
-    } catch (e) {
-        container.innerHTML = '<p class="text-red-500">Failed to load connection data.</p>';
+        const status = await fetchJson("/api/master-key-status");
+        setBanner(!!status.configured);
+    } catch {
+        // If endpoint not available, don’t block UI; show “not configured”
+        setBanner(false);
     }
+
+    show("view-dashboard");
 }
 
-// View Connection Detail (Missing in prompt but required for UI)
-async function viewConnection(id) {
-    currentConnectionId = id;
-    const detailView = document.getElementById('view-detail');
-    const dashboardView = document.getElementById('view-dashboard');
-    const detailContent = document.getElementById('detail-content');
-
-    dashboardView.classList.add('hidden');
-    detailView.classList.remove('hidden');
-
-    try {
-        const res = await fetch(`${API_BASE}/connections/${id}`);
-        const data = await res.json();
-
-        document.getElementById('detail-title').innerText = data.displayName || data.name || 'Connection Details';
-
-        // Render details
-        detailContent.innerHTML = Object.entries(data)
-            .filter(([k]) => k !== 'configEncrypted' && k !== 'config')
-            .map(([k, v]) => `
-                <div class="mb-2">
-                    <span class="font-semibold text-gray-500 block uppercase text-xs tracking-wider">${k}</span>
-                    <span class="font-mono text-gray-800 break-all">${v}</span>
-                </div>
-            `).join('');
-
-    } catch (e) {
-        detailContent.innerHTML = '<p class="text-red-500">Failed to load details</p>';
-    }
-}
-
-
-// 4. Save New Connection
-async function handleSave(event) {
-    event.preventDefault();
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true;
-    btn.innerText = 'Securing...';
-
-    const payload = {
-        displayName: document.getElementById('conn-name').value, // Matches backend expectation
-        config: { apiKey: document.getElementById('conn-apiKey').value }
-    };
-
-    try {
-        const res = await fetch(`${API_BASE}/connections`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
-        hideCreate();
-        loadConnections();
-    } catch (e) {
-        alert("Error: " + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = 'Authorize Connection';
-    }
-}
-
-// 5. Generate Session Token
-async function createSession() {
-    if (!currentConnectionId) return;
-
-    try {
-        const res = await fetch(`${API_BASE}/sessions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ connectionId: currentConnectionId })
-        });
-
-        const data = await res.json();
-
-        if (data.error) {
-            alert("Error: " + (data.message || data.error));
-            return;
-        }
-
-        document.getElementById('session-output').classList.remove('hidden');
-        document.getElementById('token-display').innerText = data.accessToken;
-    } catch (e) {
-        alert("Failed to generate token");
-    }
-}
-
-// Helper: Copy to Clipboard
-function copyToken() {
-    const text = document.getElementById('token-display').innerText;
-    navigator.clipboard.writeText(text).then(() => alert('Copied!'));
-}
+main();
