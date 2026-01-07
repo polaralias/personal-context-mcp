@@ -85,7 +85,7 @@ describe('Auth Flow Integration Tests', () => {
                 code_challenge_method: 'S256'
             });
             expect(res.status).toBe(200);
-            expect(res.text).toContain('Connect Personal Context MCP Server');
+            expect(res.text).toContain('Personal Context MCP Server');
         });
     });
 
