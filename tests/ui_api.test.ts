@@ -48,14 +48,14 @@ describe('UI API Standardization', () => {
     it('GET / serves index.html by default', async () => {
         const res = await request(app).get('/');
         expect(res.status).toBe(200);
-        expect(res.text).toContain('<title>MCP Server</title>');
-        expect(res.text).toContain('src="/app.js"');
+        expect(res.text).toContain('<title>Personal Context MCP Server</title>');
+        expect(res.text).toContain('src="app.js"');
     });
 
     it('GET / serves Connect UI when parameters are present', async () => {
         const res = await request(app).get('/?redirect_uri=foo&state=bar&code_challenge=baz&code_challenge_method=S256');
         expect(res.status).toBe(200);
-        expect(res.text).toContain('<title>Connect - Personal Context MCP Server</title>');
+        expect(res.text).toContain('<title>Connect Personal Context MCP</title>');
     });
 
     it('GET /api/api-keys/schema (via alias) works', async () => {

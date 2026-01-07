@@ -45,8 +45,11 @@ app.get('/api/config-status', (_req, res) => {
   res.json({ status: hasMasterKey() ? 'present' : 'missing' });
 });
 
-// API Config Schema
+// API Config Schema (only for user-bound mode)
 app.get('/api/config-schema', (_req, res) => {
+  if (process.env.API_KEY_MODE !== 'user_bound') {
+    return res.status(404).json({ error: 'Not available' });
+  }
   res.json({ fields: configFields });
 });
 
@@ -104,8 +107,10 @@ app.post('/api/connections', async (req, res) => {
   }
 
   try {
-    const { displayName, config } = req.body;
-    const connection = await createConnection(displayName || 'New Connection', config || {});
+    const { displayName, name, config } = req.body;
+    // Accept both name and displayName for compatibility
+    const connectionName = displayName || name || 'New Connection';
+    const connection = await createConnection(connectionName, config || {});
     const { configEncrypted, ...rest } = connection;
     res.json(rest);
   } catch (error) {

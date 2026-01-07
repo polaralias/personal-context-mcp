@@ -62,61 +62,59 @@ export const renderHtml = (error?: string, values?: any, query?: any) => {
     return `
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect - ${configSchema.name}</title>
+    <title>Connect Personal Context MCP</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-md w-full max-w-xl overflow-hidden">
-        <div class="bg-blue-600 p-6 text-white">
-            <h1 class="text-2xl font-bold">Connect ${configSchema.name}</h1>
-            <p class="mt-2 opacity-90">${configSchema.description}</p>
-        </div>
+    <div class="bg-white rounded-lg shadow-lg max-w-lg w-full p-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2 text-center">Personal Context MCP Server</h1>
+        <p class="text-gray-600 text-center mb-6">Configure your connection</p>
 
-        <div class="p-6">
-            ${fatalError ? `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
-                <p class="font-bold">Error</p>
-                <p>${fatalError}</p>
-            </div>` : ''}
+        ${fatalError ? `<div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded" role="alert">
+            <p class="font-bold">Error</p>
+            <p>${fatalError}</p>
+        </div>` : ''}
 
-            <form action="/connect" method="POST" class="space-y-4">
-                <input type="hidden" name="redirect_uri" value="${redirectUri}">
-                <input type="hidden" name="client_id" value="${clientId}">
-                <input type="hidden" name="state" value="${state}">
-                <input type="hidden" name="code_challenge" value="${codeChallenge}">
-                <input type="hidden" name="code_challenge_method" value="${codeChallengeMethod}">
+        <form action="/connect" method="POST" class="space-y-4">
+            <input type="hidden" name="redirect_uri" value="${redirectUri}">
+            <input type="hidden" name="client_id" value="${clientId}">
+            <input type="hidden" name="state" value="${state}">
+            <input type="hidden" name="code_challenge" value="${codeChallenge}">
+            <input type="hidden" name="code_challenge_method" value="${codeChallengeMethod}">
 
-                <fieldset class="${missingParams.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${missingParams.length > 0 ? 'disabled' : ''}>
-                    ${configSchema.fields.map(field => `
-                    <div class="mb-4">
-                        <label for="${field.key}" class="block text-sm font-medium text-gray-700 mb-1">
-                            ${field.label} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                        </label>
-                        <input
-                            type="${field.secret ? 'password' : 'text'}"
-                            name="${field.key}"
-                            id="${field.key}"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="${field.help || ''}"
-                            ${field.required ? 'required' : ''}
-                            value="${!field.secret && values && values[field.key] ? values[field.key] : (field.default || '')}"
-                        >
-                        ${field.help ? `<p class="mt-1 text-xs text-gray-500">${field.help}</p>` : ''}
-                    </div>
-                    `).join('')}
+            <fieldset class="${missingParams.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${missingParams.length > 0 ? 'disabled' : ''}>
+                ${configSchema.fields.map(field => `
+                <div class="mb-4">
+                    <label for="${field.key}" class="block text-sm font-medium text-gray-700 mb-1">
+                        ${field.label} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                    </label>
+                    <input
+                        type="${field.secret ? 'password' : 'text'}"
+                        name="${field.key}"
+                        id="${field.key}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="${field.help || ''}"
+                        ${field.required ? 'required' : ''}
+                        value="${!field.secret && values && values[field.key] ? values[field.key] : (field.default || '')}"
+                    >
+                    ${field.help ? `<p class="text-xs text-gray-500 mt-1">${field.help}</p>` : ''}
+                </div>
+                `).join('')}
 
-                    <div class="pt-4">
-                        <button type="submit" 
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out ${missingParams.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}"
-                            ${missingParams.length > 0 ? 'disabled' : ''}>
-                            Connect
-                        </button>
-                    </div>
-                </fieldset>
-            </form>
-        </div>
+                <div class="pt-4">
+                    <button type="submit" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition ${missingParams.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+                        ${missingParams.length > 0 ? 'disabled' : ''}>
+                        Connect
+                    </button>
+                </div>
+            </fieldset>
+        </form>
     </div>
 </body>
 </html>
