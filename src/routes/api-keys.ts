@@ -45,25 +45,16 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        const config = req.body.config;
-        if (!config) {
+        const body = req.body ?? {};
+        const config = (body && typeof body === 'object' && 'config' in body) ? (body as any).config : body;
+
+        if (!config || (typeof config === 'object' && Object.keys(config).length === 0)) {
             return res.status(400).json({ error: 'Missing configuration' });
         }
 
         const result = await apiKeyService.provisionKey(config, ip);
 
-        // Return HTML success page or JSON depending on Accept header
-        if (req.accepts('html')) {
-            // Simple success render - in real app might use template engine
-            // For now, return JSON as the UI will likely be fetching this
-            // But spec says "Return an HTML success page" - let's assume the client-side JS handles the POST 
-            // and renders the result to avoid server-side HTML complexity for now, or send a fragment.
-            // Actually, "Receive an API key (shown once)... Return an HTML success page"
-            // Let's return JSON and let the frontend show the success state.
-            res.json({ apiKey: result.key });
-        } else {
-            res.json({ apiKey: result.key });
-        }
+        res.json({ apiKey: result.key });
     } catch (error: any) {
         logger.error({ err: error }, 'Failed to issue API key');
         res.status(400).json({ error: error.message });

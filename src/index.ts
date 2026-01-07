@@ -50,9 +50,8 @@ app.get('/api/config-schema', (_req, res) => {
   res.json({ fields: configFields });
 });
 
-// API Keys - Alias for standardization
+// API Keys - Standardized mounting
 app.use('/api/api-keys', apiKeyRoutes);
-app.use('/api-keys', apiKeyRoutes);
 
 // Root Route - Dashboard or OAuth Authorisation
 app.get('/', (req, res) => {
