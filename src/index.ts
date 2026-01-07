@@ -47,7 +47,11 @@ app.get('/api/config-status', (_req, res) => {
 
 // API Config Schema
 app.get('/api/config-schema', (_req, res) => {
-  res.json({ fields: configFields });
+  if (process.env.API_KEY_MODE === 'user_bound') {
+    res.json({ fields: configFields });
+  } else {
+    res.status(404).json({ error: 'User-bound API keys are disabled' });
+  }
 });
 
 // API Keys - Standardized mounting
@@ -104,8 +108,9 @@ app.post('/api/connections', async (req, res) => {
   }
 
   try {
-    const { displayName, config } = req.body;
-    const connection = await createConnection(displayName || 'New Connection', config || {});
+    const { displayName, name, config } = req.body;
+    const finalName = displayName || name || 'New Connection';
+    const connection = await createConnection(finalName, config || {});
     const { configEncrypted, ...rest } = connection;
     res.json(rest);
   } catch (error) {
