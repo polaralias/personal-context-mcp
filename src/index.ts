@@ -17,7 +17,6 @@ import { createLogger, getRequestId } from './logger';
 import { hasMasterKey } from './utils/masterKey';
 import { renderHtml } from './routes/connect';
 import apiKeyRoutes from './routes/api-keys';
-import { createConnection, getConnection, signToken } from './services/auth';
 import { configFields } from './config/schema/personal-context';
 
 const app = express();
