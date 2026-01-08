@@ -12,31 +12,25 @@
     <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full p-8">
         <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Personal Context MCP Server</h1>
 
-        <!-- Configuration Status Banner -->
-        <div id="config-status-banner" class="hidden mb-6 p-4 rounded-lg border">
-            <div class="flex items-center">
-                <div id="status-icon" class="mr-3"></div>
+        <!-- View: Login -->
+        <div id="view-login" class="space-y-6">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-700">Login</h2>
+                <p class="text-gray-600 mt-2">Enter your Master Key to manage API keys.</p>
+            </div>
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <h3 id="status-title" class="font-bold"></h3>
-                    <p id="status-message" class="text-sm"></p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Master Key</label>
+                    <input type="password" id="master-key-input" required
+                        class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="••••••••••••••••">
                 </div>
-            </div>
-            <div id="status-guidance" class="mt-3 text-xs border-t pt-2 hidden">
-                <p class="font-semibold mb-1">Guidance:</p>
-                <p>Set <code class="bg-gray-200 px-1 rounded">MASTER_KEY</code> in docker-compose environment or export
-                    it when running locally:</p>
-                <div class="mt-2 space-y-2">
-                    <p><strong>Local:</strong> <code
-                            class="bg-gray-800 text-white p-1 rounded block mt-1 line-clamp-1">export MASTER_KEY=your_secret_key</code>
-                    </p>
-                    <p><strong>Docker Compose:</strong></p>
-                    <pre class="bg-gray-800 text-white p-2 rounded text-[10px] overflow-x-auto">
-services:
-  personal-context-mcp:
-    environment:
-      - MASTER_KEY=your_secret_key</pre>
-                </div>
-            </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium transition">
+                    Login
+                </button>
+            </form>
+            <div id="login-error" class="hidden text-red-600 text-sm text-center"></div>
         </div>
 
         <!-- View: Config Entry (User Bound Mode) -->
@@ -81,77 +75,8 @@ services:
             </div>
         </div>
 
-        <!-- View: Manage Connections (Default) -->
-        <div id="view-dashboard" class="space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-semibold text-gray-700">Connections</h2>
-                <button onclick="showCreate()"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">
-                    New Connection
-                </button>
-            </div>
-            <div id="list-container" class="space-y-4">
-                <!-- Populated by JS -->
-                <p class="text-gray-500 text-center py-4">Loading...</p>
-            </div>
-        </div>
-
-        <!-- View: Create/Edit Connection -->
-        <div id="view-create" class="hidden space-y-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-700" id="form-title">New Connection</h2>
-                <button onclick="hideCreate()" class="text-gray-500 hover:text-gray-700" id="cancel-btn">
-                    Cancel
-                </button>
-            </div>
-
-            <form id="config-form" onsubmit="handleSave(event)" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Connection Name</label>
-                    <input type="text" id="conn-name"
-                        class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                        placeholder="My Personal Context">
-                </div>
-
-                <div id="dynamic-config-fields" class="space-y-4">
-                    <!-- Dynamic fields will be inserted here -->
-                </div>
-
-                <div class="pt-4 flex justify-end">
-                    <button type="submit" id="save-btn"
-                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-medium transition w-full md:w-auto">
-                        Connect
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- View: Connection Details -->
-        <div id="view-detail" class="hidden space-y-6">
-            <div class="flex items-center space-x-4 mb-4">
-                <button onclick="hideDetail()" class="text-gray-500 hover:text-gray-800">&larr; Back</button>
-                <h2 class="text-xl font-semibold text-gray-700">Connection Details</h2>
-            </div>
-
-            <div id="detail-content" class="bg-gray-50 p-4 rounded text-sm text-gray-700 space-y-2"></div>
-
-            <div class="border-t pt-4">
-                <h3 class="text-lg font-medium text-gray-800 mb-2">Connect to Client</h3>
-                <button onclick="createSession()"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition">
-                    Generate New Session Token
-                </button>
-
-                <div id="session-output" class="hidden mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-                    <p class="font-bold text-yellow-800 mb-2">Session Token (Copy this):</p>
-                    <div class="relative">
-                        <pre id="token-display" class="bg-white p-3 rounded border text-sm overflow-x-auto font-mono"></pre>
-                        <button onclick="copyToken()"
-                            class="absolute top-2 right-2 text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Copy</button>
-                    </div>
-                    <p class="text-xs text-gray-600 mt-2">Authorization: Bearer &lt;token&gt;</p>
-                </div>
-            </div>
+        <div id="view-footer" class="hidden mt-8 text-center text-xs text-gray-400">
+            <p>API keys are never stored in plain text and expire after 30 days of inactivity.</p>
         </div>
     </div>
     <script src="app.js"></script>

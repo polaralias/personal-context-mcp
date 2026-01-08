@@ -16,6 +16,24 @@ const checkMode = (_req: express.Request, res: express.Response, next: express.N
     next();
 };
 
+/**
+ * Middleware to check if the request is authorized via MASTER_KEY.
+ * Simple implementation: check X-Master-Key header.
+ */
+const authenticateMasterKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const providedKey = req.headers['x-master-key'] as string;
+    const actualKey = process.env.MASTER_KEY;
+
+    if (!actualKey) {
+        return res.status(500).json({ error: 'Server MASTER_KEY not configured' });
+    }
+
+    if (providedKey !== actualKey) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid Master Key' });
+    }
+    next();
+};
+
 router.use(checkMode);
 
 // GET /schema - Helper for UI to render form
@@ -23,8 +41,8 @@ router.get('/schema', (_req, res) => {
     res.json(configFields);
 });
 
-// POST / - Issue new key
-router.post('/', async (req, res) => {
+// POST / - Issue new key (Requires Master Key)
+router.post('/', authenticateMasterKey, async (req, res) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
 
     // 1. Rate Limit
@@ -54,6 +72,7 @@ router.post('/', async (req, res) => {
 
         const result = await apiKeyService.provisionKey(config, ip);
 
+        // Return the key ONLY ONCE
         res.json({ apiKey: result.key });
     } catch (error: any) {
         logger.error({ err: error }, 'Failed to issue API key');
@@ -61,35 +80,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET /me - Metadata (Authenticated)
-router.get('/me', async (req, res) => {
-    // This route requires auth. 
-    // We can rely on mcpAuth middleware if attached, but mcpAuth is specific to /mcp usually.
-    // We need to validate the key here specifically for this management route.
-
-    const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] as string;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-    // We don't use mcpAuth here because we want the metadata, which authenticateMcp puts in req.mcpConfig?
-    // authenticateMcp puts config in req.mcpConfig, but doesn't expose metadata like created date.
-    // So we resolve it ourselves.
-
-    const result = await apiKeyService.validateKey(token, req.ip || 'unknown');
-    if (!result) return res.status(401).json({ error: 'Unauthorized' });
-
-    res.json(result.metadata);
-});
-
-// POST /revoke - Revoke key
-router.post('/revoke', async (req, res) => {
-    const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-api-key'] as string;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-    const result = await apiKeyService.validateKey(token, req.ip || 'unknown');
-    if (!result) return res.status(401).json({ error: 'Unauthorized' });
-
-    await apiKeyService.revokeKey(token);
-    res.json({ success: true });
-});
+// Removed /me and /revoke endpoints to minimize exposure and avoid listability.
+// API Keys represent connections that should be ephemeral in management.
 
 export default router;

@@ -58,11 +58,33 @@ describe('UI API Standardization', () => {
         expect(res.text).toContain('<title>Connect - Personal Context MCP Server</title>');
     });
 
-    it('GET /api/api-keys/schema (via alias) works', async () => {
-        // The original route was /api-keys/schema. The new alias is /api/api-keys/schema.
+    it('GET /api/api-keys/schema works', async () => {
         const res = await request(app).get('/api/api-keys/schema');
         expect(res.status).toBe(200);
-        // It returns an array directly based on api-keys.ts:23
         expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    it('POST /api/verify-master-key returns 200 for correct key', async () => {
+        const res = await request(app)
+            .post('/api/verify-master-key')
+            .send({ masterKey: 'test-master-key' });
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+    });
+
+    it('POST /api/api-keys fails without MASTER_KEY', async () => {
+        const res = await request(app)
+            .post('/api/api-keys')
+            .send({ config: { some: 'config' } });
+        expect(res.status).toBe(401);
+    });
+
+    it('POST /api/api-keys works with MASTER_KEY', async () => {
+        const res = await request(app)
+            .post('/api/api-keys')
+            .set('X-Master-Key', 'test-master-key')
+            .send({ config: { some: 'config' } });
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('apiKey');
     });
 });

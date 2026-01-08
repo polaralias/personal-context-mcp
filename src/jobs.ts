@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { HomeAssistantConnector } from './connectors/homeassistant';
 import { GoogleConnector } from './connectors/google';
 import { HolidayService } from './services/holiday';
+import { ApiKeyService } from './services/apiKeyService';
 import prisma from './db';
 import { createLogger } from './logger';
 
@@ -34,15 +35,20 @@ export function startJobs() {
     // The connector accepts pollCron in config but doesn't self-schedule. We schedule it here.
     const googleCron = process.env.GOOGLE_POLL_CRON || '0 * * * *';
     cron.schedule(googleCron, () => {
-         // Google Connector has its own check for apiKey presence
-         logger.info('polling Google Location');
-         googleConnector.pollLocation();
+        // Google Connector has its own check for apiKey presence
+        logger.info('polling Google Location');
+        googleConnector.pollLocation();
     });
 
     // Refresh Holidays daily at 2am
     cron.schedule('0 2 * * *', () => {
         logger.info('refreshing holidays');
         holidayService.fetchHolidays();
+    });
+
+    // Revoke inactive API keys daily at 1am
+    cron.schedule('0 1 * * *', () => {
+        ApiKeyService.getInstance().revokeInactiveKeys();
     });
 
     // Data Cleanup Job: Runs daily at 3am
