@@ -47,14 +47,28 @@ app.get('/api/config-status', (_req, res) => {
 
 // API Config Schema
 app.get('/api/config-schema', (_req, res) => {
-  res.json({ fields: configFields });
+  if (process.env.API_KEY_MODE === 'user_bound') {
+    res.json({ fields: configFields });
+  } else {
+    res.status(404).json({ error: 'User-bound API keys are disabled' });
+  }
 });
 
-// API Keys - Alias for standardization
+// API Keys - Standardized mounting
 app.use('/api/api-keys', apiKeyRoutes);
-app.use('/api-keys', apiKeyRoutes);
 
-// Root Route - Dashboard or OAuth Authorisation
+// Verify Master Key (UI Login)
+app.post('/api/verify-master-key', (req, res) => {
+  const { masterKey } = req.body;
+  const actualKey = process.env.MASTER_KEY;
+  if (actualKey && masterKey === actualKey) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, error: 'Invalid Master Key' });
+  }
+});
+
+// Root Route - Login or Provisioning UI
 app.get('/', (req, res) => {
   const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
 
@@ -63,82 +77,12 @@ app.get('/', (req, res) => {
     return res.send(renderHtml(undefined, undefined, req.query));
   }
 
-  // Otherwise, serve the dashboard (provisioning handled client-side now)
+  // Serve the unified UI (login + provisioning)
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// API Connections
-app.get('/api/connections', async (req, res) => {
-  try {
-    const connections = await prisma.connection.findMany({
-      orderBy: { createdAt: 'desc' }
-    });
-    // Remove sensitive config before sending
-    const safeConnections = connections.map(c => {
-      const { configEncrypted, ...rest } = c;
-      return rest;
-    });
-    res.json(safeConnections);
-  } catch (error) {
-    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to list connections');
-    res.status(500).json({ error: 'failed_to_list_connections' });
-  }
-});
-
-app.get('/api/connections/:id', async (req, res) => {
-  try {
-    const connection = await getConnection(req.params.id);
-    if (!connection) {
-      return res.status(404).json({ error: 'not_found' });
-    }
-    const { configEncrypted, ...rest } = connection;
-    res.json(rest);
-  } catch (error) {
-    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to get connection');
-    res.status(500).json({ error: 'failed_to_get_connection' });
-  }
-});
-
-app.post('/api/connections', async (req, res) => {
-  if (!hasMasterKey()) {
-    return res.status(400).json({ error: 'MASTER_KEY_MISSING', message: 'Connection creation blocked: MASTER_KEY is missing.' });
-  }
-
-  try {
-    const { displayName, config } = req.body;
-    const connection = await createConnection(displayName || 'New Connection', config || {});
-    const { configEncrypted, ...rest } = connection;
-    res.json(rest);
-  } catch (error) {
-    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to create connection');
-    res.status(500).json({ error: 'failed_to_create_connection' });
-  }
-});
-
-// API Sessions
-app.post('/api/sessions', async (req, res) => {
-  if (!hasMasterKey()) {
-    return res.status(400).json({ error: 'MASTER_KEY_MISSING', message: 'Session generation blocked: MASTER_KEY is missing.' });
-  }
-
-  try {
-    const { connectionId } = req.body;
-    if (!connectionId) {
-      return res.status(400).json({ error: 'connection_id_required' });
-    }
-
-    const connection = await getConnection(connectionId);
-    if (!connection) {
-      return res.status(404).json({ error: 'connection_not_found' });
-    }
-
-    const token = signToken(connectionId);
-    res.json({ accessToken: token });
-  } catch (error) {
-    logger.error({ err: error, requestId: getRequestId(req) }, 'failed to create session');
-    res.status(500).json({ error: 'failed_to_create_session' });
-  }
-});
+// Connection management and session routes removed to prevent visibility of existing keys/connections.
+// OAuth flows (/connect, /token, etc.) remain as they are required for legitimate client use.
 
 // New Auth Routes
 app.use('/connect', connectRoutes);

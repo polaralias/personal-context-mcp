@@ -167,4 +167,41 @@ export class ApiKeyService {
             data: { revokedAt: new Date() }
         });
     }
+
+    /**
+     * Revokes all API keys that have not been used for more than 30 days.
+     * Refreshing logic: Active use within 30 days keeps the key alive.
+     */
+    async revokeInactiveKeys() {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        logger.info('Running inactive API key revocation job...');
+
+        const result = await prisma.apiKey.updateMany({
+            where: {
+                revokedAt: null,
+                OR: [
+                    {
+                        // Never used and created more than 30 days ago
+                        lastUsedAt: null,
+                        createdAt: { lt: thirtyDaysAgo }
+                    },
+                    {
+                        // Used, but not within the last 30 days
+                        lastUsedAt: { lt: thirtyDaysAgo }
+                    }
+                ]
+            },
+            data: {
+                revokedAt: new Date()
+            }
+        });
+
+        if (result.count > 0) {
+            logger.info({ Count: result.count }, 'Revoked inactive API keys');
+        }
+
+        return result.count;
+    }
 }

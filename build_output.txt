@@ -1,0 +1,26 @@
+﻿
+> personal-context-mcp@1.0.0 build
+> tsc
+
+node.exe : 'tsc' is not 
+recognized as an internal 
+or external command,
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: ('  
+  tsc' is not re...tern   
+ al command,:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+operable program or batch 
+file.
