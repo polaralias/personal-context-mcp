@@ -13,7 +13,7 @@ export class RateLimiter {
     constructor(
         private windowSeconds: number,
         private limit: number,
-        private cleanupIntervalSeconds: number = 600
+        cleanupIntervalSeconds: number = 600
     ) {
         // Periodic cleanup of expired entries
         setInterval(() => this.cleanup(), cleanupIntervalSeconds * 1000).unref();

@@ -2,14 +2,14 @@ import express from 'express';
 import { ApiKeyService } from '../services/apiKeyService';
 import { issueRateLimiter } from '../utils/rateLimit';
 import { createLogger } from '../logger';
-import { configFields, personalContextConfigSchema } from '../config/schema/personal-context';
+import { configFields } from '../config/schema/personal-context';
 
 const router = express.Router();
 const logger = createLogger('routes:api-keys');
 const apiKeyService = ApiKeyService.getInstance();
 
 // Middleware to check API_KEY_MODE
-const checkMode = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const checkMode = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (process.env.API_KEY_MODE !== 'user_bound') {
         return res.status(404).json({ error: 'User-bound API keys are disabled' });
     }
@@ -19,7 +19,7 @@ const checkMode = (req: express.Request, res: express.Response, next: express.Ne
 router.use(checkMode);
 
 // GET /schema - Helper for UI to render form
-router.get('/schema', (req, res) => {
+router.get('/schema', (_req, res) => {
     res.json(configFields);
 });
 
