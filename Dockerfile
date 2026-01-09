@@ -9,6 +9,9 @@ COPY prisma ./prisma/
 # Install all dependencies (including devDependencies like prisma CLI)
 RUN npm ci
 
+# Install openssl for Prisma
+RUN apk add --no-cache openssl
+
 COPY . .
 
 # Generate Prisma Client (artifacts go to node_modules/.prisma)
@@ -23,6 +26,9 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma/
+
+# Install openssl for Prisma
+RUN apk add --no-cache openssl
 
 # Install only production dependencies
 RUN npm ci --omit=dev
