@@ -46,6 +46,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.1",
     "@prisma/client": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
