@@ -1,86 +1,66 @@
-import express from 'express';
-import { ApiKeyService } from '../services/apiKeyService';
-import { issueRateLimiter } from '../utils/rateLimit';
+import express, { Request, Response } from 'express';
+import { createUserBoundKey } from '../services/auth';
 import { createLogger } from '../logger';
-import { configFields } from '../config/schema/personal-context';
+import { hasMasterKey } from '../utils/masterKey';
 
 const router = express.Router();
 const logger = createLogger('routes:api-keys');
-const apiKeyService = ApiKeyService.getInstance();
 
-// Middleware to check API_KEY_MODE
-const checkMode = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+// In-memory rate limiting
+const issueRateLimit = new Map<string, { count: number; timestamp: number }>();
+const ISSUE_WINDOW_MS = parseInt(process.env.API_KEY_ISSUE_WINDOW_SECONDS || '3600') * 1000;
+const ISSUE_MAX_REQUESTS = parseInt(process.env.API_KEY_ISSUE_RATELIMIT || '3');
+
+const checkRateLimit = (req: Request): boolean => {
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+    const limit = issueRateLimit.get(ip);
+
+    if (!limit) {
+        issueRateLimit.set(ip, { count: 1, timestamp: now });
+        return true;
+    }
+
+    if (now - limit.timestamp > ISSUE_WINDOW_MS) {
+        issueRateLimit.set(ip, { count: 1, timestamp: now });
+        return true;
+    }
+
+    if (limit.count >= ISSUE_MAX_REQUESTS) {
+        return false;
+    }
+
+    limit.count++;
+    return true;
+};
+
+router.post('/', async (req: Request, res: Response) => {
     if (process.env.API_KEY_MODE !== 'user_bound') {
         return res.status(404).json({ error: 'User-bound API keys are disabled' });
     }
-    next();
-};
 
-/**
- * Middleware to check if the request is authorized via MASTER_KEY.
- * Simple implementation: check X-Master-Key header.
- */
-const authenticateMasterKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const providedKey = req.headers['x-master-key'] as string;
-    const actualKey = process.env.MASTER_KEY;
-
-    if (!actualKey) {
-        return res.status(500).json({ error: 'Server MASTER_KEY not configured' });
+    if (!hasMasterKey()) {
+        return res.status(500).json({ error: 'Server not configured (MASTER_KEY missing)' });
     }
 
-    if (providedKey !== actualKey) {
-        return res.status(401).json({ error: 'Unauthorized: Invalid Master Key' });
-    }
-    next();
-};
-
-router.use(checkMode);
-
-// GET /schema - Helper for UI to render form
-router.get('/schema', (_req, res) => {
-    res.json(configFields);
-});
-
-// POST / - Issue new key (Requires Master Key)
-router.post('/', authenticateMasterKey, async (req, res) => {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
-
-    // 1. Rate Limit
-    if (!issueRateLimiter.check(ip)) {
-        return res.status(429).json({ error: 'Rate limit exceeded. Try again later.' });
+    if (!checkRateLimit(req)) {
+        return res.status(429).json({ error: 'Too many requests' });
     }
 
-    // 2. Validate Turnstile (Placeholder if needed)
-    if (process.env.TURNSTILE_SITE_KEY) {
-        const token = req.body['cf-turnstile-response'];
-        if (!token) {
-            // Return 400 but allow testing bypass
-            if (process.env.TEST_BYPASS_TURNSTILE !== 'true') {
-                return res.status(400).json({ error: 'Turnstile verification failed' });
-            }
-        }
-        // TODO: Verify with Cloudflare API
+    const config = req.body;
+
+    // Validate config (e.g. apiKey starts with pk_)
+    if (!config.apiKey || !String(config.apiKey).startsWith('pk_')) {
+        return res.status(400).json({ error: 'Invalid API Key format. Must start with pk_' });
     }
 
     try {
-        const body = req.body ?? {};
-        const config = (body && typeof body === 'object' && 'config' in body) ? (body as any).config : body;
-
-        if (!config || (typeof config === 'object' && Object.keys(config).length === 0)) {
-            return res.status(400).json({ error: 'Missing configuration' });
-        }
-
-        const result = await apiKeyService.provisionKey(config, ip);
-
-        // Return the key ONLY ONCE
-        res.json({ apiKey: result.key });
-    } catch (error: any) {
+        const rawKey = await createUserBoundKey(config);
+        res.status(201).json({ apiKey: rawKey });
+    } catch (error) {
         logger.error({ err: error }, 'Failed to issue API key');
-        res.status(400).json({ error: error.message });
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
-// Removed /me and /revoke endpoints to minimize exposure and avoid listability.
-// API Keys represent connections that should be ephemeral in management.
 
 export default router;

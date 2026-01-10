@@ -10,6 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Keeping existing operational models
 model WorkStatusEvent {
   id        Int       @id @default(autoincrement())
   createdAt DateTime  @default(now()) @map("created_at")
@@ -55,58 +56,73 @@ model BankHolidayCache {
   @@map("bank_holidays_cache")
 }
 
-model Connection {
-  id              String   @id @default(uuid())
-  displayName     String?  @map("display_name")
-  configEncrypted String   @map("config_encrypted")
-  configVersion   Int?     @default(1) @map("config_version")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+// OAuth & Auth Models
 
-  authCodes       AuthCode[]
-
-  @@map("connections")
-}
-
-model AuthCode {
-  id                  Int       @id @default(autoincrement())
-  codeHash            String    @unique @map("code_hash")
-  connectionId        String    @map("connection_id")
-  redirectUri         String    @map("redirect_uri")
-  state               String
-  codeChallenge       String    @map("code_challenge")
-  codeChallengeMethod String    @map("code_challenge_method")
-  expiresAt           DateTime  @map("expires_at")
-  usedAt              DateTime? @map("used_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-
-  connection          Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-
-  @@map("auth_codes")
-  @@index([codeHash])
-}
-
-model RegisteredClient {
-  id                      String   @id @default(uuid())
-  clientName              String?  @map("client_name")
-  redirectUris           String[] @map("redirect_uris")
+model Client {
+  clientId                String   @id @default(uuid()) @map("client_id")
+  redirectUris            Json     @map("redirect_uris") // JSONB
   tokenEndpointAuthMethod String   @default("none") @map("token_endpoint_auth_method")
+  clientName              String?  @map("client_name")
   grantTypes              String[] @map("grant_types")
   responseTypes           String[] @map("response_types")
   scope                   String?
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
-  @@map("registered_clients")
+  authCodes               AuthCode[]
+
+  @@map("clients")
+}
+
+model Connection {
+  id               String    @id @default(uuid())
+  name             String?   @map("name")
+  config           Json?     @map("config") // Public config
+  encryptedSecrets String    @map("encrypted_secrets")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  sessions         Session[]
+  authCodes        AuthCode[]
+
+  @@map("connections")
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  connectionId String    @map("connection_id")
+  tokenHash    String    @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  revoked      Boolean   @default(false)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model AuthCode {
+  code                String    @id // Stores SHA-256 hash of the code
+  connectionId        String    @map("connection_id")
+  redirectUri         String    @map("redirect_uri")
+  state               String?
+  clientId            String    @map("client_id")
+  codeChallenge       String    @map("code_challenge")
+  codeChallengeMethod String    @map("code_challenge_method")
+  expiresAt           DateTime  @map("expires_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  connection          Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  client              Client     @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@map("auth_codes")
 }
 
 model UserConfig {
   id                String    @id @default(uuid())
   serverId          String    @map("server_id")
-  configEnc         String    @map("config_enc") // Encrypted JSON blob
+  configEnc         String    @map("config_enc")
   configFingerprint String?   @map("config_fingerprint")
-  displayName       String?   @map("display_name")
-  revokedAt         DateTime? @map("revoked_at")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -121,7 +137,6 @@ model ApiKey {
   userConfigId   String      @map("user_config_id")
   keyHash        String      @unique @map("key_hash")
   createdIp      String?     @map("created_ip")
-  lastUsedIp     String?     @map("last_used_ip")
   lastUsedAt     DateTime?   @map("last_used_at")
   revokedAt      DateTime?   @map("revoked_at")
   createdAt      DateTime    @default(now()) @map("created_at")
@@ -130,4 +145,12 @@ model ApiKey {
 
   @@map("api_keys")
   @@index([keyHash])
+}
+
+model Cache {
+  key       String   @id
+  value     Json
+  expiresAt DateTime @map("expires_at")
+
+  @@map("cache")
 }

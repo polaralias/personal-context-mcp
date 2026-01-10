@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { createRegisteredClient } from '../services/auth';
+import { createClient } from '../services/auth';
 import { createLogger } from '../logger';
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const logger = createLogger('routes:register');
 
 // In-memory rate limiting for /register
 const registerRateLimit = new Map<string, { count: number; timestamp: number }>();
-const REGISTER_WINDOW_MS = 60 * 1000; // 1 minute
+const REGISTER_WINDOW_MS = 60 * 1000;
 const REGISTER_MAX_REQUESTS = 10;
 
 const checkRateLimit = (req: Request): boolean => {
@@ -21,7 +21,6 @@ const checkRateLimit = (req: Request): boolean => {
     }
 
     if (now - limit.timestamp > REGISTER_WINDOW_MS) {
-        // Reset window
         registerRateLimit.set(ip, { count: 1, timestamp: now });
         return true;
     }
@@ -34,96 +33,52 @@ const checkRateLimit = (req: Request): boolean => {
     return true;
 };
 
-// Redirect URI Validation Helper
-const validateRedirectUris = (uris: string[]): boolean => {
-    if (!uris || uris.length === 0) return false;
-
-    const allowListStr = process.env.REDIRECT_URI_ALLOWLIST || '';
-    const allowList = allowListStr.split(',').map(u => u.trim()).filter(u => u.length > 0);
-    const mode = process.env.REDIRECT_URI_ALLOWLIST_MODE || 'exact';
-
-    for (const uri of uris) {
-        try {
-            const parsed = new URL(uri);
-            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-                return false;
-            }
-        } catch {
-            return false;
-        }
-
-        // If allowlisting exists, enforcement is mandatory
-        if (allowList.length > 0) {
-            let allowed = false;
-            if (mode === 'prefix') {
-                allowed = allowList.some(a => uri.startsWith(a));
-            } else {
-                allowed = allowList.includes(uri);
-            }
-            if (!allowed) return false;
-        }
-    }
-
-    return true;
-};
-
 router.post('/', async (req: Request, res: Response) => {
     if (!checkRateLimit(req)) {
-        return res.status(429).json({ error: 'too_many_requests' });
+        return res.status(429).json({ error: 'Too many requests' });
     }
 
-    const {
-        redirect_uris,
-        client_name,
-        token_endpoint_auth_method,
-        grant_types,
-        response_types,
-        scope
-    } = req.body;
+    const { redirect_uris, client_name } = req.body;
 
     if (!redirect_uris || !Array.isArray(redirect_uris) || redirect_uris.length === 0) {
-        return res.status(400).json({ error: 'invalid_redirect_uri', error_description: 'redirect_uris is required and must be a non-empty array' });
+        return res.status(400).json({ error: 'redirect_uris is required and must be an array' });
     }
 
-    if (!validateRedirectUris(redirect_uris)) {
-        // B4: Rejection logging
-        logger.warn({
-            event: 'redirect_uri_rejected',
-            rejected_uris: redirect_uris,
-            client_name,
-            path: '/register',
-            ip: req.ip
-        }, 'Redirect URI rejected by allowlist');
+    // Validate URIs
+    const allowList = process.env.REDIRECT_URI_ALLOWLIST ? process.env.REDIRECT_URI_ALLOWLIST.split(',') : [];
+    const mode = process.env.REDIRECT_URI_ALLOWLIST_MODE || 'prefix';
 
-        // B5: User-facing error message
-        return res.status(400).json({
-            error: 'invalid_redirect_uri',
-            error_description: "This client isn't in the redirect allow list - raise an issue on GitHub for it to be added"
-        });
+    for (const uri of redirect_uris) {
+        if (!uri.startsWith('http://') && !uri.startsWith('https://')) {
+             return res.status(400).json({ error: 'redirect_uris must be http or https' });
+        }
+
+        if (allowList.length > 0) {
+            let allowed = false;
+            for (const allowedUri of allowList) {
+                if (mode === 'exact') {
+                    if (uri === allowedUri.trim()) allowed = true;
+                } else {
+                    if (uri.startsWith(allowedUri.trim())) allowed = true;
+                }
+            }
+            if (!allowed) {
+                logger.warn({ event: 'register_rejected', uri, ip: req.ip }, 'Redirect URI not in allowlist');
+                return res.status(400).json({ error: 'One or more redirect_uris are not allowed' });
+            }
+        }
     }
 
     try {
-        const client = await createRegisteredClient({
-            clientName: client_name,
-            redirectUris: redirect_uris,
-            tokenEndpointAuthMethod: token_endpoint_auth_method,
-            grantTypes: grant_types,
-            responseTypes: response_types,
-            scope: scope
-        });
-
+        const client = await createClient(client_name, redirect_uris);
         res.status(201).json({
-            client_id: client.id,
-            client_id_issued_at: Math.floor(client.createdAt.getTime() / 1000),
+            client_id: client.clientId,
             client_name: client.clientName,
             redirect_uris: client.redirectUris,
-            token_endpoint_auth_method: client.tokenEndpointAuthMethod,
-            grant_types: client.grantTypes,
-            response_types: client.responseTypes,
-            scope: client.scope
+            token_endpoint_auth_method: client.tokenEndpointAuthMethod
         });
     } catch (error) {
-        logger.error({ err: error }, 'Error registering client');
+        logger.error({ err: error }, 'Client registration failed');
         res.status(500).json({ error: 'server_error' });
     }
 });

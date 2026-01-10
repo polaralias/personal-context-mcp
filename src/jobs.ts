@@ -2,7 +2,6 @@ import cron from 'node-cron';
 import { HomeAssistantConnector } from './connectors/homeassistant';
 import { GoogleConnector } from './connectors/google';
 import { HolidayService } from './services/holiday';
-import { ApiKeyService } from './services/apiKeyService';
 import prisma from './db';
 import { createLogger } from './logger';
 
@@ -47,8 +46,36 @@ export function startJobs() {
     });
 
     // Revoke inactive API keys daily at 1am
-    cron.schedule('0 1 * * *', () => {
-        ApiKeyService.getInstance().revokeInactiveKeys();
+    cron.schedule('0 1 * * *', async () => {
+         // Reimplement revocation logic inline or move to auth.ts service
+         const thirtyDaysAgo = new Date();
+         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+         logger.info('Running inactive API key revocation job...');
+
+         const result = await prisma.apiKey.updateMany({
+             where: {
+                 revokedAt: null,
+                 OR: [
+                     {
+                         // Never used and created more than 30 days ago
+                         lastUsedAt: null,
+                         createdAt: { lt: thirtyDaysAgo }
+                     },
+                     {
+                         // Used, but not within the last 30 days
+                         lastUsedAt: { lt: thirtyDaysAgo }
+                     }
+                 ]
+             },
+             data: {
+                 revokedAt: new Date()
+             }
+         });
+
+         if (result.count > 0) {
+             logger.info({ Count: result.count }, 'Revoked inactive API keys');
+         }
     });
 
     // Data Cleanup Job: Runs daily at 3am
