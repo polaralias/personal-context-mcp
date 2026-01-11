@@ -7,6 +7,11 @@ const mocks = vi.hoisted(() => {
         verifyToken: vi.fn(),
         getConnection: vi.fn(),
         decryptConfig: vi.fn(),
+        prisma: {
+            apiKey: { findUnique: vi.fn(), update: vi.fn() },
+            session: { findUnique: vi.fn() },
+            connection: { findUnique: vi.fn() },
+        }
     };
 });
 
@@ -20,11 +25,10 @@ vi.mock('../src/services/auth', async () => {
     };
 });
 
-vi.mock('@prisma/client', () => {
+vi.mock('../src/db', () => {
     return {
-        PrismaClient: class {
-            $queryRaw = vi.fn().mockResolvedValue([1]);
-        },
+        default: mocks.prisma,
+        __esModule: true,
     };
 });
 
@@ -104,6 +108,30 @@ describe('MCP Dual Auth Integration Tests', () => {
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(200);
+        });
+
+        it('should return 200 with valid user-bound API key', async () => {
+            const mockKey = 'mcp_sk_valid_key';
+            const mockConfig = { googleMapsApiKey: 'secret' };
+
+            mocks.prisma.apiKey.findUnique.mockResolvedValue({
+                id: 'key-123',
+                revokedAt: null,
+                userConfig: {
+                    configEnc: 'iv:tag:enc'
+                }
+            });
+            mocks.prisma.apiKey.update.mockResolvedValue({});
+            mocks.decryptConfig.mockReturnValue(mockConfig);
+
+            const res = await request(app)
+                .post('/mcp')
+                .set('x-api-key', mockKey)
+                .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
+
+            expect(res.status).toBe(200);
+            expect(mocks.prisma.apiKey.findUnique).toHaveBeenCalled();
+            expect(mocks.decryptConfig).toHaveBeenCalledWith('iv:tag:enc');
         });
 
         it('should return 401 with invalid API key', async () => {

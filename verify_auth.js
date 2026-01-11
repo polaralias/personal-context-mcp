@@ -1,12 +1,17 @@
-const { validateApiKey } = require('./src/services/auth');
-const crypto = require('crypto');
+const fetch = require('node-fetch');
 
-process.env.MCP_API_KEY = 'test-key';
-process.env.MCP_API_KEYS = 'key1, key2';
+async function testAuth() {
+    const res = await fetch('http://localhost:3000/mcp', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'mcp_sk_invalid'
+        },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', id: 1 })
+    });
 
-console.log('Testing validateApiKey:');
-console.log('test-key:', validateApiKey('test-key')); // true
-console.log('key1:', validateApiKey('key1')); // true
-console.log('key2:', validateApiKey('key2')); // true
-console.log('wrong:', validateApiKey('wrong')); // false
-console.log('empty:', validateApiKey('')); // false
+    console.log('Status:', res.status);
+    console.log('Body:', await res.json());
+}
+
+testAuth();

@@ -73,36 +73,34 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
     if (candidateKey) {
         // 1. Check User Bound Key (mcp_sk_)
         if (candidateKey.startsWith('mcp_sk_')) {
-            if (process.env.API_KEY_MODE === 'user_bound') {
-                if (!mcpRateLimiter.check(candidateKey)) {
-                    logger.warn({ ip: req.ip }, 'Rate limit exceeded for key');
-                    return res.status(429).json({ error: 'Too Many Requests' });
+            if (!mcpRateLimiter.check(candidateKey)) {
+                logger.warn({ ip: req.ip }, 'Rate limit exceeded for key');
+                return res.status(429).json({ error: 'Too Many Requests' });
+            }
+
+            const keyHash = hashString(candidateKey);
+            try {
+                const apiKey = await prisma.apiKey.findUnique({
+                    where: { keyHash },
+                    include: { userConfig: true }
+                });
+
+                // Check if revoked (either key or config)
+                if (apiKey && !apiKey.revokedAt) {
+                    // Decrypt config
+                    const config = decryptConfig(apiKey.userConfig.configEnc);
+                    req.mcpConfig = config;
+
+                    // Async update last used
+                    prisma.apiKey.update({
+                        where: { id: apiKey.id },
+                        data: { lastUsedAt: new Date() }
+                    }).catch(() => { });
+
+                    return next();
                 }
-
-                const keyHash = hashString(candidateKey);
-                try {
-                    const apiKey = await prisma.apiKey.findUnique({
-                        where: { keyHash },
-                        include: { userConfig: true }
-                    });
-
-                    // Check if revoked (either key or config, though config revokedAt is not in min requirements so skipping unless present in model)
-                    if (apiKey && !apiKey.revokedAt) {
-                        // Decrypt config
-                        const config = decryptConfig(apiKey.userConfig.configEnc);
-                        req.mcpConfig = config;
-
-                        // Async update last used
-                        prisma.apiKey.update({
-                            where: { id: apiKey.id },
-                            data: { lastUsedAt: new Date() }
-                        }).catch(() => { });
-
-                        return next();
-                    }
-                } catch (e) {
-                    logger.error({ err: e }, 'Error validating user key');
-                }
+            } catch (e) {
+                logger.error({ err: e }, 'Error validating user key');
             }
         }
 
@@ -135,9 +133,9 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
     // No valid auth found
     if (candidateKey) {
         logger.warn({ ip: req.ip }, 'Invalid authentication credentials');
-        return unauthorized(res, 'Unauthorized: Invalid credentials');
+        return unauthorized(res, 'Invalid API key');
     }
 
     logger.warn({ ip: req.ip }, 'Missing authentication credentials');
-    return unauthorized(res, 'Unauthorized: Authentication required (Bearer token or x-api-key)');
+    return unauthorized(res, 'Authentication required');
 };
