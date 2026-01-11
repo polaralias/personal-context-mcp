@@ -158,8 +158,8 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // Split config into public and private
-    const { apiKey, ...publicConfig } = parsed.data;
-    const secretConfig = { apiKey };
+    const { googleMapsApiKey, ...publicConfig } = parsed.data;
+    const secretConfig = { apiKey: googleMapsApiKey };
 
     try {
         const connection = await createConnection(name, publicConfig, secretConfig);

@@ -53,6 +53,8 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
     const authHeader = req.headers['authorization'];
     const apiKeyHeader = req.headers['x-api-key'] as string;
     const apiKeyQuery = req.query.apiKey as string;
+    const apiKeyParam = req.params.apiKey as string;
+
 
     let candidateKey: string | null = null;
     let isBearer = false;
@@ -64,6 +66,8 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
         candidateKey = apiKeyHeader;
     } else if (apiKeyQuery) {
         candidateKey = apiKeyQuery;
+    } else if (apiKeyParam) {
+        candidateKey = apiKeyParam;
     }
 
     if (candidateKey) {
@@ -71,8 +75,8 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
         if (candidateKey.startsWith('mcp_sk_')) {
             if (process.env.API_KEY_MODE === 'user_bound') {
                 if (!mcpRateLimiter.check(candidateKey)) {
-                     logger.warn({ ip: req.ip }, 'Rate limit exceeded for key');
-                     return res.status(429).json({ error: 'Too Many Requests' });
+                    logger.warn({ ip: req.ip }, 'Rate limit exceeded for key');
+                    return res.status(429).json({ error: 'Too Many Requests' });
                 }
 
                 const keyHash = hashString(candidateKey);
@@ -92,7 +96,7 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
                         prisma.apiKey.update({
                             where: { id: apiKey.id },
                             data: { lastUsedAt: new Date() }
-                        }).catch(() => {});
+                        }).catch(() => { });
 
                         return next();
                     }

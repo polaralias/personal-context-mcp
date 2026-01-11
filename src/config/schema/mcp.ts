@@ -13,77 +13,79 @@ export type ConfigField = {
 
 const userBoundFields: ConfigField[] = [
     {
-        name: 'apiKey',
-        label: 'ClickUp API Key',
+        name: 'googleMapsApiKey',
+        label: 'Google Maps API Key',
         type: 'password',
         required: true,
-        placeholder: 'pk_...',
-        description: 'Your personal API token from ClickUp settings'
+        placeholder: 'AIza...',
+        description: 'Your Google Maps API Key for location lookups'
     },
     {
-        name: 'teamId',
-        label: 'Team ID',
+        name: 'homeLocation',
+        label: 'Home Location',
+        type: 'text',
+        required: true,
+        placeholder: 'e.g. London, UK',
+        description: 'Your primary home location'
+    },
+    {
+        name: 'haUrl',
+        label: 'Home Assistant URL',
         type: 'text',
         required: false,
-        description: 'Optional: ID of the workspace to use'
+        placeholder: 'https://...',
+        description: 'Optional: Your Home Assistant instance URL'
+    },
+    {
+        name: 'haToken',
+        label: 'Home Assistant Token',
+        type: 'password',
+        required: false,
+        description: 'Optional: Long-lived access token for Home Assistant'
+    },
+    {
+        name: 'haEntityId',
+        label: 'Home Assistant Entity ID',
+        type: 'text',
+        required: false,
+        placeholder: 'device_tracker.my_phone',
+        description: 'Optional: Entity ID to poll for location'
     }
 ];
 
 const connectFields: ConfigField[] = [
     {
-        name: 'apiKey',
-        label: 'ClickUp API Key',
+        name: 'googleMapsApiKey',
+        label: 'Google Maps API Key',
         type: 'password',
         required: true,
-        placeholder: 'pk_...',
-        description: 'Your personal API token from ClickUp settings'
+        placeholder: 'AIza...',
+        description: 'Your Google Maps API Key for location lookups'
     },
     {
-        name: 'readOnly',
-        label: 'Read Only',
-        type: 'checkbox',
-        required: false,
-        description: 'If checked, the server will not modify any data'
-    },
-    {
-        name: 'selectiveWrite',
-        label: 'Selective Write',
-        type: 'checkbox',
-        required: false,
-        description: 'Enable granular write permissions'
-    },
-    {
-        name: 'writeSpaces',
-        label: 'Write Spaces',
+        name: 'homeLocation',
+        label: 'Home Location',
         type: 'text',
-        format: 'csv',
-        required: false,
-        description: 'Comma-separated list of Space IDs allowed to write to'
-    },
-    {
-        name: 'writeLists',
-        label: 'Write Lists',
-        type: 'text',
-        format: 'csv',
-        required: false,
-        description: 'Comma-separated list of List IDs allowed to write to'
+        required: true,
+        placeholder: 'e.g. London, UK',
+        description: 'Your primary home location'
     }
 ];
 
 const userBoundSchema = z
     .object({
-        apiKey: z.string().min(1),
-        teamId: z.string().optional()
+        googleMapsApiKey: z.string().min(1),
+        homeLocation: z.string().min(1),
+        haUrl: z.string().optional(),
+        haToken: z.string().optional(),
+        haEntityId: z.string().optional()
     })
     .strict();
 
 const connectSchema = z
     .object({
-        apiKey: z.string().min(1),
-        readOnly: z.boolean().optional(),
-        selectiveWrite: z.boolean().optional(),
-        writeSpaces: z.array(z.string()).optional(),
-        writeLists: z.array(z.string()).optional()
+        googleMapsApiKey: z.string().min(1),
+        homeLocation: z.string().min(1)
     })
     .strict();
 

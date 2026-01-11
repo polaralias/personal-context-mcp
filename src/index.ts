@@ -81,6 +81,8 @@ app.use('/.well-known', wellKnownRoutes);
 
 // MCP Streamable HTTP endpoint
 app.all('/mcp', authenticateMcp, handleMcpRequest);
+app.all('/key=:apiKey', authenticateMcp, handleMcpRequest);
+app.all('/key=:apiKey/mcp', authenticateMcp, handleMcpRequest);
 
 if (require.main === module) {
   if (!hasMasterKey()) {
