@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => {
         markAuthCodeUsed: vi.fn(),
         signToken: vi.fn(),
         verifyPkce: vi.fn(),
+        createSession: vi.fn(),
+        getClient: vi.fn(),
     };
 });
 
@@ -21,6 +23,8 @@ vi.mock('../src/services/auth', () => {
         markAuthCodeUsed: mocks.markAuthCodeUsed,
         signToken: mocks.signToken,
         verifyPkce: mocks.verifyPkce,
+        createSession: mocks.createSession,
+        getClient: mocks.getClient,
     };
 });
 
@@ -41,6 +45,9 @@ describe('Auth Flow Integration Tests', () => {
         // Reset rate limits? Rate limits are in-memory in the module.
         // We might need to restart app or mock the Map if we want to test rate limits effectively
         // without time waits, but for basic functional testing we just ensure we don't hit it.
+        mocks.getClient.mockResolvedValue({
+            redirectUris: ['http://localhost:3010']
+        });
     });
 
 
@@ -61,10 +68,11 @@ describe('Auth Flow Integration Tests', () => {
                 redirect_uri: 'http://evil.com',
                 state: '123',
                 code_challenge: 'abc',
-                code_challenge_method: 'S256'
+                code_challenge_method: 'S256',
+                client_id: 'client-123'
             });
             expect(res.status).toBe(400);
-            expect(res.text).toContain('Invalid or missing redirect_uri');
+            expect(res.text).toContain('Redirect URI not allowed');
         });
 
         it('should allow valid redirect_uri', async () => {
@@ -74,10 +82,11 @@ describe('Auth Flow Integration Tests', () => {
                 redirect_uri: 'http://localhost:3010',
                 state: '123',
                 code_challenge: 'abc',
-                code_challenge_method: 'S256'
+                code_challenge_method: 'S256',
+                client_id: 'client-123'
             });
             expect(res.status).toBe(200);
-            expect(res.text).toContain('Personal Context MCP Server');
+            expect(res.text).toContain('Create Connection');
         });
     });
 
@@ -88,16 +97,22 @@ describe('Auth Flow Integration Tests', () => {
                 connectionId: 'conn-123',
                 redirectUri: 'http://localhost:3010',
                 codeChallenge: 'abc',
-                codeChallengeMethod: 'S256'
+                codeChallengeMethod: 'S256',
+                clientId: 'client-123'
             });
             mocks.verifyPkce.mockReturnValue(true);
             mocks.signToken.mockReturnValue('access-token-123');
+            mocks.createSession.mockResolvedValue({
+                accessToken: 'access-token-123',
+                expiresIn: 3600
+            });
 
             const res = await request(app).post('/token').send({
                 grant_type: 'authorization_code',
                 code: 'valid-code',
                 code_verifier: 'verifier',
-                redirect_uri: 'http://localhost:3010'
+                redirect_uri: 'http://localhost:3010',
+                client_id: 'client-123'
             });
 
             expect(res.status).toBe(200);
@@ -111,7 +126,8 @@ describe('Auth Flow Integration Tests', () => {
                 grant_type: 'authorization_code',
                 code: 'invalid-code',
                 code_verifier: 'verifier',
-                redirect_uri: 'http://localhost:3010'
+                redirect_uri: 'http://localhost:3010',
+                client_id: 'client-123'
             });
 
             expect(res.status).toBe(400);
@@ -122,8 +138,8 @@ describe('Auth Flow Integration Tests', () => {
             // We need to send > 10 requests to trigger rate limit
             // Note: Supertest requests might come from same "IP" in test env
 
-            // First 10 should be fine (or fail due to mock logic, but not 429)
-            for (let i = 0; i < 10; i++) {
+            // First 20 should be fine (limit is 20)
+            for (let i = 0; i < 20; i++) {
                 await request(app).post('/token').send({ grant_type: 'authorization_code' });
             }
 

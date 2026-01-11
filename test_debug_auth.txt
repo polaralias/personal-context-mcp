@@ -1,0 +1,32 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/james.DESKTOP-Q8VOBFS/Documents/Development/personal-context-mcp[39m
+
+{"level":30,"time":1768127068440,"pid":22404,"hostname":"Laptop","component":"http","method":"GET","path":"/.well-known/oauth-protected-resource","statusCode":404,"durationMs":7.22,"msg":"request completed"}
+{"level":30,"time":1768127068470,"pid":22404,"hostname":"Laptop","component":"http","method":"GET","path":"/connect?redirect_uri=http%3A%2F%2Fevil.com&state=123&code_challenge=abc&code_challenge_method=S256","statusCode":400,"durationMs":2.88,"msg":"request completed"}
+{"level":30,"time":1768127068477,"pid":22404,"hostname":"Laptop","component":"http","method":"GET","path":"/connect?redirect_uri=http%3A%2F%2Flocalhost%3A3010&state=123&code_challenge=abc&code_challenge_method=S256","statusCode":400,"durationMs":0.97,"msg":"request completed"}
+{"level":30,"time":1768127068497,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.89,"msg":"request completed"}
+{"level":30,"time":1768127068501,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.37,"msg":"request completed"}
+{"level":30,"time":1768127068505,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.28,"msg":"request completed"}
+{"level":30,"time":1768127068508,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.41,"msg":"request completed"}
+{"level":30,"time":1768127068511,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.29,"msg":"request completed"}
+{"level":30,"time":1768127068515,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.34,"msg":"request completed"}
+{"level":30,"time":1768127068520,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.55,"msg":"request completed"}
+{"level":30,"time":1768127068523,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.33,"msg":"request completed"}
+{"level":30,"time":1768127068526,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.26,"msg":"request completed"}
+{"level":30,"time":1768127068528,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.22,"msg":"request completed"}
+{"level":30,"time":1768127068531,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.18,"msg":"request completed"}
+{"level":30,"time":1768127068533,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.22,"msg":"request completed"}
+{"level":30,"time":1768127068536,"pid":22404,"hostname":"Laptop","component":"http","method":"POST","path":"/token","statusCode":400,"durationMs":0.23,"msg":"request completed"}
+ [31mΓ¥»[39m tests/auth_flow.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 127[2mms[22m[39m
+[31m       [31m├ù[31m should return resource and authorization_servers[39m[32m 50[2mms[22m[39m
+[31m       [31m├ù[31m should validate redirect_uri[39m[32m 11[2mms[22m[39m
+[31m       [31m├ù[31m should allow valid redirect_uri[39m[32m 5[2mms[22m[39m
+[31m       [31m├ù[31m should exchange code for token[39m[32m 19[2mms[22m[39m
+[31m       [31m├ù[31m should fail with invalid code[39m[32m 4[2mms[22m[39m
+[31m       [31m├ù[31m should enforce rate limiting[39m[32m 35[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m6 failed[39m[22m[90m (6)[39m
+[2m   Start at [22m 10:24:26
+[2m   Duration [22m 1.84s[2m (transform 370ms, setup 0ms, import 1.41s, tests 127ms, environment 0ms)[22m
+

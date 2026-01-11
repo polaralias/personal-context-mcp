@@ -4,6 +4,7 @@ import path from 'path';
 import connectRoutes from './routes/connect';
 import tokenRoutes from './routes/token';
 import registerRoutes from './routes/register';
+import wellKnownRoutes from './routes/well-known';
 import { handleMcpRequest } from './server/mcp';
 import { authenticateMcp } from './middleware/mcpAuth';
 import { startJobs } from './jobs';
@@ -56,11 +57,7 @@ app.get('/api/config-status', (_req, res) => {
 
 // API Config Schema
 app.get('/api/config-schema', (_req, res) => {
-  if (process.env.API_KEY_MODE === 'user_bound') {
-    res.json(getUserBoundSchema());
-  } else {
-    res.status(404).json({ error: 'User-bound API keys are disabled' });
-  }
+  res.json(getUserBoundSchema());
 });
 
 // API Connect Schema (for /connect flow)
@@ -73,9 +70,6 @@ app.get('/api/connect-schema', (_req, res) => {
 app.use('/api/api-keys', apiKeyRoutes);
 
 app.get('/', (_req, res) => {
-  if (process.env.API_KEY_MODE !== 'user_bound') {
-    return res.status(404).send('Not found');
-  }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -83,6 +77,7 @@ app.get('/', (_req, res) => {
 app.use('/connect', connectRoutes);
 app.use('/token', tokenRoutes);
 app.use('/register', registerRoutes);
+app.use('/.well-known', wellKnownRoutes);
 
 // MCP Streamable HTTP endpoint
 app.all('/mcp', authenticateMcp, handleMcpRequest);

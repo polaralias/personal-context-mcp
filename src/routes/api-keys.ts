@@ -36,9 +36,7 @@ const checkRateLimit = (req: Request): boolean => {
 };
 
 router.post('/', async (req: Request, res: Response) => {
-    if (process.env.API_KEY_MODE !== 'user_bound') {
-        return res.status(404).json({ error: 'User-bound API keys are disabled' });
-    }
+    // API_KEY_MODE check removed to enable user-bound keys by default
 
     if (!hasMasterKey()) {
         return res.status(500).json({ error: 'Server not configured (MASTER_KEY missing)' });
