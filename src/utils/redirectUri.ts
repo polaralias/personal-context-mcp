@@ -10,7 +10,7 @@ const extractHostname = (raw: string): string | null => {
         }
     }
 
-    const withoutPath = trimmed.split('/')[0];
+    const withoutPath = trimmed.split('/')[0] ?? '';
     const host = withoutPath.split(':')[0];
     return host ? host.toLowerCase() : null;
 };

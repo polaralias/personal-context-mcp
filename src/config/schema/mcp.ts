@@ -42,12 +42,14 @@ const connectFields: ConfigField[] = [
         name: 'readOnly',
         label: 'Read Only',
         type: 'checkbox',
+        required: false,
         description: 'If checked, the server will not modify any data'
     },
     {
         name: 'selectiveWrite',
         label: 'Selective Write',
         type: 'checkbox',
+        required: false,
         description: 'Enable granular write permissions'
     },
     {
@@ -55,6 +57,7 @@ const connectFields: ConfigField[] = [
         label: 'Write Spaces',
         type: 'text',
         format: 'csv',
+        required: false,
         description: 'Comma-separated list of Space IDs allowed to write to'
     },
     {
@@ -62,6 +65,7 @@ const connectFields: ConfigField[] = [
         label: 'Write Lists',
         type: 'text',
         format: 'csv',
+        required: false,
         description: 'Comma-separated list of List IDs allowed to write to'
     }
 ];

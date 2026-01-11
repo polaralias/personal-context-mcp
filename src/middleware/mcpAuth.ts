@@ -16,7 +16,7 @@ declare global {
     }
 }
 
-const unauthorized = (req: Request, res: Response, error: string) => {
+const unauthorized = (res: Response, error: string) => {
     return res.status(401).json({ error });
 };
 
@@ -131,9 +131,9 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
     // No valid auth found
     if (candidateKey) {
         logger.warn({ ip: req.ip }, 'Invalid authentication credentials');
-        return unauthorized(req, res, 'Unauthorized: Invalid credentials');
+        return unauthorized(res, 'Unauthorized: Invalid credentials');
     }
 
     logger.warn({ ip: req.ip }, 'Missing authentication credentials');
-    return unauthorized(req, res, 'Unauthorized: Authentication required (Bearer token or x-api-key)');
+    return unauthorized(res, 'Unauthorized: Authentication required (Bearer token or x-api-key)');
 };
