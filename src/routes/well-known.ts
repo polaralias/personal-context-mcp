@@ -20,7 +20,7 @@ const getBaseUrl = (req: Request): string => {
 router.get('/oauth-protected-resource', (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
     res.json({
-        resource: baseUrl,
+        resource: `${baseUrl}/mcp`,
         authorization_servers: [baseUrl]
     });
 });

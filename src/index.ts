@@ -69,7 +69,10 @@ app.get('/api/connect-schema', (_req, res) => {
 // API Keys - Standardized mounting
 app.use('/api/api-keys', apiKeyRoutes);
 
-app.get('/', (_req, res) => {
+app.get('/', (req, res) => {
+  if (req.headers.accept === 'text/event-stream') {
+    return res.redirect('/mcp');
+  }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
