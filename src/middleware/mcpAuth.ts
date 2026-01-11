@@ -16,21 +16,7 @@ declare global {
     }
 }
 
-const getBaseUrl = (req: Request): string => {
-    if (process.env.BASE_URL) return process.env.BASE_URL;
-
-    const protocol = req.protocol || 'http';
-    const host = req.get('host') || req.headers.host || 'localhost';
-    return `${protocol}://${host}`;
-};
-
-const setOauthDiscoveryHeader = (req: Request, res: Response) => {
-    const baseUrl = getBaseUrl(req);
-    res.set('WWW-Authenticate', `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`);
-};
-
 const unauthorized = (req: Request, res: Response, error: string) => {
-    setOauthDiscoveryHeader(req, res);
     return res.status(401).json({ error });
 };
 

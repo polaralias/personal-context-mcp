@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { createUserBoundKey } from '../services/auth';
 import { createLogger } from '../logger';
 import { hasMasterKey } from '../utils/masterKey';
+import { validateUserBoundConfig } from '../config/schema/mcp';
 
 const router = express.Router();
 const logger = createLogger('routes:api-keys');
@@ -49,13 +50,13 @@ router.post('/', async (req: Request, res: Response) => {
 
     const config = req.body;
 
-    // Validate config (e.g. apiKey starts with pk_)
-    if (!config.apiKey || !String(config.apiKey).startsWith('pk_')) {
-        return res.status(400).json({ error: 'Invalid API Key format. Must start with pk_' });
+    const parsed = validateUserBoundConfig(config);
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid configuration payload' });
     }
 
     try {
-        const rawKey = await createUserBoundKey(config);
+        const rawKey = await createUserBoundKey(parsed.data);
         res.status(201).json({ apiKey: rawKey });
     } catch (error) {
         logger.error({ err: error }, 'Failed to issue API key');

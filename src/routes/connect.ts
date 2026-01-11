@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import { createConnection, createAuthCode, getClient } from '../services/auth';
 import { createLogger } from '../logger';
 import { hasMasterKey } from '../utils/masterKey';
+import { validateConnectConfig } from '../config/schema/mcp';
+import { isRedirectUriAllowed } from '../utils/redirectUri';
 
 const router = express.Router();
 const logger = createLogger('routes:connect');
@@ -40,10 +42,22 @@ const checkRateLimit = (req: Request): boolean => {
 
 // GET /connect
 router.get('/', async (req: Request, res: Response) => {
-    const { client_id, redirect_uri, code_challenge_method } = req.query;
+    const { client_id, redirect_uri, code_challenge, code_challenge_method } = req.query;
 
     if (!client_id || typeof client_id !== 'string') {
         return res.status(400).send('Missing client_id');
+    }
+
+    if (!redirect_uri || typeof redirect_uri !== 'string') {
+        return res.status(400).send('Missing redirect_uri');
+    }
+
+    if (!code_challenge || typeof code_challenge !== 'string') {
+        return res.status(400).send('Missing code_challenge');
+    }
+
+    if (!code_challenge_method || typeof code_challenge_method !== 'string') {
+        return res.status(400).send('Missing code_challenge_method');
     }
 
     const client = await getClient(client_id);
@@ -51,23 +65,25 @@ router.get('/', async (req: Request, res: Response) => {
         return res.status(400).send('Invalid client_id');
     }
 
-    if (redirect_uri && typeof redirect_uri === 'string') {
-        const allowedUris = client.redirectUris as string[];
-        if (!allowedUris.includes(redirect_uri)) {
-             logger.warn({
-                event: 'redirect_uri_rejected',
-                rejected_uri: redirect_uri,
-                allowed_uris: allowedUris,
-                client_id,
-                path: '/connect',
-                ip: req.ip
-            }, 'Redirect URI rejected: not registered for this client');
-            return res.status(400).send('Redirect URI not allowed');
-        }
+    const allowedUris = client.redirectUris as string[];
+    if (!allowedUris.includes(redirect_uri)) {
+        logger.warn({
+            event: 'redirect_uri_rejected',
+            rejected_uri: redirect_uri,
+            allowed_uris: allowedUris,
+            client_id,
+            path: '/connect',
+            ip: req.ip
+        }, 'Redirect URI rejected: not registered for this client');
+        return res.status(400).send('Redirect URI not allowed');
     }
 
-    if (code_challenge_method && code_challenge_method !== 'S256') {
+    if (code_challenge_method !== 'S256') {
         return res.status(400).send('Invalid code_challenge_method (must be S256)');
+    }
+
+    if (!isRedirectUriAllowed(redirect_uri)) {
+        return res.status(400).send('Redirect URI not allowed');
     }
 
     // Generate CSRF Token
@@ -132,18 +148,18 @@ router.post('/', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Invalid code_challenge_method' });
     }
 
-    // Split config into public and private
-    const { apiKey, ...publicConfig } = config || {};
-    const secretConfig = { apiKey };
-
-    // Ensure teamId exists (mock logic as per prompt "Ensures teamId exists... if missing, resolves it")
-    if (!publicConfig.teamId) {
-        // In a real implementation, we would call ClickUp API here using apiKey.
-        // For compliance with the prompt's structural requirements without external API calls,
-        // we stub this to a placeholder if not provided.
-        // logger.info("Resolving teamId from ClickUp API (stubbed)");
-        publicConfig.teamId = "team_stub_123";
+    if (!isRedirectUriAllowed(redirect_uri)) {
+        return res.status(400).json({ error: 'Redirect URI not allowed' });
     }
+
+    const parsed = validateConnectConfig(config);
+    if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid configuration payload' });
+    }
+
+    // Split config into public and private
+    const { apiKey, ...publicConfig } = parsed.data;
+    const secretConfig = { apiKey };
 
     try {
         const connection = await createConnection(name, publicConfig, secretConfig);

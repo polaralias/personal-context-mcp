@@ -1,24 +1,20 @@
 import 'dotenv/config';
 import express from 'express';
-import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
 import path from 'path';
-import authRoutes from './routes/auth';
 import connectRoutes from './routes/connect';
 import tokenRoutes from './routes/token';
 import registerRoutes from './routes/register';
-import wellKnownRoutes from './routes/well-known';
 import { handleMcpRequest } from './server/mcp';
 import { authenticateMcp } from './middleware/mcpAuth';
 import { startJobs } from './jobs';
-import prisma from './db';
+import { runMigrations } from './db';
 import { requestLogger } from './middleware/logger';
-import { createLogger, getRequestId } from './logger';
+import { createLogger } from './logger';
 import { hasMasterKey, getMasterKeyInfo } from './utils/masterKey';
+import { getConnectSchema, getUserBoundSchema } from './config/schema/mcp';
 import apiKeyRoutes from './routes/api-keys';
 
 const app = express();
-const swaggerDocument = YAML.load('./openapi.yaml');
 const port = process.env.PORT || 3000;
 const logger = createLogger('server');
 
@@ -47,45 +43,21 @@ app.use((req, _res, next) => {
 // Serve static UI
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// API Config Status
-app.get('/api/master-key-status', (_req, res) => {
-  res.json({ configured: hasMasterKey() });
-});
-
 app.get('/api/config-status', (_req, res) => {
   const info = getMasterKeyInfo();
-  res.json({
-    status: info.status,
-    format: info.status === 'present' ? (info.derivation === 'hex-decode' ? '64-hex' : 'passphrase') : undefined,
-    isFallback: info.isInsecureDefault
+  if (info.status !== 'present') {
+    return res.json({ status: 'missing' });
+  }
+  return res.json({
+    status: 'present',
+    format: info.derivation === 'hex-decode' ? 'hex' : 'passphrase'
   });
 });
 
 // API Config Schema
 app.get('/api/config-schema', (_req, res) => {
   if (process.env.API_KEY_MODE === 'user_bound') {
-    // Return ClickUp-like schema as per prompt requirements
-    // "Repo’s ClickUp schema (explicit): apiKey (password, required, placeholder pk_..., help text), teamId (optional text)"
-    // I should return a structure compatible with `app.js` render logic.
-    res.json({
-      fields: [
-        {
-          name: 'apiKey',
-          label: 'ClickUp API Key',
-          type: 'password',
-          required: true,
-          placeholder: 'pk_...',
-          description: 'Your personal API token from ClickUp settings'
-        },
-        {
-          name: 'teamId',
-          label: 'Team ID',
-          type: 'text',
-          required: false,
-          description: 'Optional: ID of the workspace to use'
-        }
-      ]
-    });
+    res.json(getUserBoundSchema());
   } else {
     res.status(404).json({ error: 'User-bound API keys are disabled' });
   }
@@ -93,45 +65,7 @@ app.get('/api/config-schema', (_req, res) => {
 
 // API Connect Schema (for /connect flow)
 app.get('/api/connect-schema', (_req, res) => {
-  res.json({
-    fields: [
-      {
-        name: 'apiKey',
-        label: 'ClickUp API Key',
-        type: 'password',
-        required: true,
-        placeholder: 'pk_...',
-        description: 'Your personal API token from ClickUp settings'
-      },
-      // Add other fields as per prompt "readOnly, selectiveWrite, writeSpaces[], writeLists[]"
-      {
-        name: 'readOnly',
-        label: 'Read Only',
-        type: 'checkbox',
-        description: 'If checked, the server will not modify any data'
-      },
-      {
-        name: 'selectiveWrite',
-        label: 'Selective Write',
-        type: 'checkbox',
-        description: 'Enable granular write permissions'
-      },
-      {
-        name: 'writeSpaces',
-        label: 'Write Spaces',
-        type: 'text',
-        format: 'csv', // Frontend handles CSV splitting
-        description: 'Comma-separated list of Space IDs allowed to write to'
-      },
-      {
-        name: 'writeLists',
-        label: 'Write Lists',
-        type: 'text',
-        format: 'csv',
-        description: 'Comma-separated list of List IDs allowed to write to'
-      }
-    ]
-  });
+  res.json(getConnectSchema());
 });
 
 
@@ -139,7 +73,9 @@ app.get('/api/connect-schema', (_req, res) => {
 app.use('/api/api-keys', apiKeyRoutes);
 
 app.get('/', (_req, res) => {
-  // Serve the unified UI (login + provisioning)
+  if (process.env.API_KEY_MODE !== 'user_bound') {
+    return res.status(404).send('Not found');
+  }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -147,39 +83,27 @@ app.get('/', (_req, res) => {
 app.use('/connect', connectRoutes);
 app.use('/token', tokenRoutes);
 app.use('/register', registerRoutes);
-app.use('/.well-known', wellKnownRoutes);
 
 // MCP Streamable HTTP endpoint
 app.all('/mcp', authenticateMcp, handleMcpRequest);
 
-// Legacy routes
-app.use('/api/auth', authRoutes);
-
-// Docs
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
-// Health
-const healthHandler = async (req: express.Request, res: express.Response) => {
-  try {
-    if (req.query.check_db) {
-      await prisma.$queryRaw`SELECT 1`;
-    }
-    res.json({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
-  } catch (error) {
-    logger.error({ err: error, requestId: getRequestId(req) }, 'health check failed');
-    res.status(503).json({ status: 'error', db: 'unavailable', timestamp: new Date().toISOString() });
-  }
-};
-
-app.get('/healthz', healthHandler);
-app.get('/health', healthHandler);
-
-
 if (require.main === module) {
-  app.listen(port, () => {
-    logger.info({ port }, 'server started');
-    startJobs();
-  });
+  if (!hasMasterKey()) {
+    logger.error('MASTER_KEY is missing. Refusing to start.');
+    process.exit(1);
+  }
+
+  runMigrations()
+    .then(() => {
+      app.listen(port, () => {
+        logger.info({ port }, 'server started');
+        startJobs();
+      });
+    })
+    .catch((error) => {
+      logger.error({ err: error }, 'Failed to run migrations');
+      process.exit(1);
+    });
 }
 
 export default app;

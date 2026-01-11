@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { createClient } from '../services/auth';
 import { createLogger } from '../logger';
+import { isRedirectUriAllowed } from '../utils/redirectUri';
 
 const router = express.Router();
 const logger = createLogger('routes:register');
@@ -45,27 +46,10 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // Validate URIs
-    const allowList = process.env.REDIRECT_URI_ALLOWLIST ? process.env.REDIRECT_URI_ALLOWLIST.split(',') : [];
-    const mode = process.env.REDIRECT_URI_ALLOWLIST_MODE || 'prefix';
-
     for (const uri of redirect_uris) {
-        if (!uri.startsWith('http://') && !uri.startsWith('https://')) {
-             return res.status(400).json({ error: 'redirect_uris must be http or https' });
-        }
-
-        if (allowList.length > 0) {
-            let allowed = false;
-            for (const allowedUri of allowList) {
-                if (mode === 'exact') {
-                    if (uri === allowedUri.trim()) allowed = true;
-                } else {
-                    if (uri.startsWith(allowedUri.trim())) allowed = true;
-                }
-            }
-            if (!allowed) {
-                logger.warn({ event: 'register_rejected', uri, ip: req.ip }, 'Redirect URI not in allowlist');
-                return res.status(400).json({ error: 'One or more redirect_uris are not allowed' });
-            }
+        if (!isRedirectUriAllowed(uri)) {
+            logger.warn({ event: 'register_rejected', uri, ip: req.ip }, 'Redirect URI not in allowlist');
+            return res.status(400).json({ error: 'One or more redirect_uris are not allowed' });
         }
     }
 
