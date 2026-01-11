@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { getUserBoundSchema } from '../config/schema/mcp';
 
 const router = express.Router();
 
@@ -16,6 +17,19 @@ const getBaseUrl = (req: Request): string => {
     const host = req.get('host');
     return `${protocol}://${host}`;
 };
+
+router.get('/mcp', (req: Request, res: Response) => {
+    const baseUrl = getBaseUrl(req);
+    res.json({
+        mcp_endpoint: `${baseUrl}/mcp`,
+        config_endpoint: `${baseUrl}/.well-known/mcp-config`,
+        oauth_protected_resource: `${baseUrl}/.well-known/oauth-protected-resource`
+    });
+});
+
+router.get('/mcp-config', (req, res) => {
+    res.json(getUserBoundSchema());
+});
 
 router.get('/oauth-protected-resource', (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
