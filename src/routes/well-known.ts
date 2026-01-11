@@ -27,7 +27,7 @@ router.get('/mcp', (req: Request, res: Response) => {
     });
 });
 
-router.get('/mcp-config', (req, res) => {
+router.get('/mcp-config', (_req, res) => {
     res.json(getUserBoundSchema());
 });
 
