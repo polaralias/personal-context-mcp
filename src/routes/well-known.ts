@@ -1,51 +1,17 @@
 import express, { Request, Response } from 'express';
-// @ts-ignore
-import packageJson from '../../package.json';
 
 const router = express.Router();
-
-export const configSchema = {
-    id: "personal-context-mcp",
-    name: "Personal Context MCP Server",
-    description: "Aggregates user status signals like location and calendar events.",
-    version: packageJson.version || "1.0.0",
-    fields: [
-        {
-            key: "displayName",
-            label: "Display Name",
-            type: "string",
-            required: false,
-            secret: false,
-            default: "",
-            help: "A friendly name for this connection"
-        },
-        {
-            key: "googleApiKey",
-            label: "Google API Key",
-            type: "string",
-            required: true,
-            secret: true,
-            default: "",
-            help: "API Key for Google services"
-        }
-    ]
-};
 
 const getBaseUrl = (req: Request): string => {
     if (process.env.BASE_URL) {
         let url = process.env.BASE_URL;
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            // Hardening: If BASE_URL is set but missing scheme, warn and normalize
-            // Using console.warn as logger might not be imported here, or import it if needed.
-            // But to be minimal and safe:
             console.warn(`[WARN] BASE_URL '${url}' is missing scheme. Defaulting to https://.`);
             url = `https://${url}`;
         }
-        return url.replace(/\/$/, ''); // Ensure no trailing slash
+        return url.replace(/\/$/, '');
     }
 
-    // Express 'trust proxy' is enabled in index.ts, so req.protocol and req.get('host')
-    // will correctly reflect X-Forwarded-* headers if present and trusted.
     const protocol = req.protocol;
     const host = req.get('host');
     return `${protocol}://${host}`;
@@ -71,10 +37,6 @@ router.get('/oauth-authorization-server', (req: Request, res: Response) => {
         code_challenge_methods_supported: ["S256"],
         token_endpoint_auth_methods_supported: ["none"]
     });
-});
-
-router.get('/mcp-config', (_req: Request, res: Response) => {
-    res.json(configSchema);
 });
 
 export default router;

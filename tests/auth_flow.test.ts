@@ -43,14 +43,6 @@ describe('Auth Flow Integration Tests', () => {
         // without time waits, but for basic functional testing we just ensure we don't hit it.
     });
 
-    describe('GET /.well-known/mcp-config', () => {
-        it('should return the standardized config schema', async () => {
-            const res = await request(app).get('/.well-known/mcp-config');
-            expect(res.status).toBe(200);
-            expect(res.body.id).toBeDefined();
-            expect(res.body.fields).toBeInstanceOf(Array);
-        });
-    });
 
     describe('GET /.well-known/oauth-protected-resource', () => {
         it('should return resource and authorization_servers', async () => {
