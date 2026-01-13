@@ -278,14 +278,14 @@ mcpServer.tool(
     }
 );
 
+import { normalizeAcceptHeader } from '../utils/mcpUtils';
+
 // HTTP Handler
 export const handleMcpRequest = async (req: Request, res: Response) => {
     logger.info({ method: req.method, url: req.url }, "Handling MCP request");
 
     try {
-        if (!req.headers.accept || req.headers.accept === '*/*') {
-            req.headers.accept = 'application/json, text/event-stream';
-        }
+        normalizeAcceptHeader(req);
 
         let transport: StreamableHTTPServerTransport;
         const sessionId = req.headers['mcp-session-id'] as string;
