@@ -4,6 +4,7 @@ import { createLogger } from '../logger';
 import { getConnection, decryptConfig, validateApiKey, hashString } from '../services/auth';
 import prisma from '../db';
 import { mcpRateLimiter } from '../utils/rateLimit';
+import { apiError, ErrorCode } from '../utils/errors';
 
 const logger = createLogger('middleware:mcpAuth');
 
@@ -16,8 +17,8 @@ declare global {
     }
 }
 
-const unauthorized = (res: Response, error: string) => {
-    return res.status(401).json({ error });
+const unauthorized = (res: Response, code: ErrorCode, message: string) => {
+    return res.status(401).json(apiError(code, message));
 };
 
 // Simplified Verify Token Helper (Access Token)
@@ -133,9 +134,9 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
     // No valid auth found
     if (candidateKey) {
         logger.warn({ ip: req.ip }, 'Invalid authentication credentials');
-        return unauthorized(res, 'Invalid API key');
+        return unauthorized(res, ErrorCode.AUTH_INVALID_KEY, 'Invalid API key');
     }
 
     logger.warn({ ip: req.ip }, 'Missing authentication credentials');
-    return unauthorized(res, 'Authentication required');
+    return unauthorized(res, ErrorCode.AUTH_MISSING, 'Authentication required');
 };

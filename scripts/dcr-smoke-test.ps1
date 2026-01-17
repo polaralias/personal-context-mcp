@@ -22,8 +22,10 @@ Write-Host "Registered Client ID: $client_id"
 Write-Host "`n--- 3. Authorize URL Generation ---" -ForegroundColor Cyan
 $state = [guid]::NewGuid().ToString()
 $code_verifier = "thisshouldbealongerrandomstringthathasenoughbits"
-# In a real test we'd hash this for S256, but for a smoke test we'll just show the URL
-$code_challenge = "E9MelAjxbSNuH_E25VbOks_oFp2_YndlR7V_R_vCXS0" # S256 of "abc..." (example)
+# Generate S256 challenge to match the verifier used during token exchange.
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+$hash = $sha256.ComputeHash([System.Text.Encoding]::ASCII.GetBytes($code_verifier))
+$code_challenge = [Convert]::ToBase64String($hash).TrimEnd("=").Replace("+", "-").Replace("/", "_")
 $scope = "openid"
 
 $auth_url = "$($metadata.authorization_endpoint)?client_id=$client_id&redirect_uri=http://localhost:8080/callback&response_type=code&state=$state&code_challenge=$code_challenge&code_challenge_method=S256"
@@ -38,7 +40,7 @@ $tokenData = @{
     code          = $code
     redirect_uri  = "http://localhost:8080/callback"
     client_id     = $client_id
-    code_verifier = "abc..." # This must be the verifier for the challenge above
+    code_verifier = $code_verifier
 }
 
 try {

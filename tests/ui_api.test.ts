@@ -70,7 +70,7 @@ describe('UI API Standardization', () => {
         delete process.env.MASTER_KEY;
         const res = await request(app)
             .post('/api/api-keys')
-            .send({ config: { some: 'config' } });
+            .send({ googleMapsApiKey: 'maps-key', homeLocation: 'London' });
         expect(res.status).toBe(500);
         process.env.MASTER_KEY = originalKey;
     });
@@ -79,7 +79,7 @@ describe('UI API Standardization', () => {
         const res = await request(app)
             .post('/api/api-keys')
             .set('X-Master-Key', 'test-master-key')
-            .send({ apiKey: 'test-api-key' });
+            .send({ googleMapsApiKey: 'maps-key', homeLocation: 'London' });
         expect(res.status).toBe(201);
         expect(res.body).toHaveProperty('apiKey');
     });

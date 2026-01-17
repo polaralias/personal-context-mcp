@@ -28,15 +28,30 @@ export const isRedirectUriAllowed = (redirectUri: string): boolean => {
     }
 
     const allowlistRaw = process.env.REDIRECT_URI_ALLOWLIST || '';
-    const allowlist = allowlistRaw
-        .split(',')
-        .map((entry) => extractHostname(entry))
-        .filter((entry): entry is string => Boolean(entry));
+    const mode = (process.env.REDIRECT_URI_ALLOWLIST_MODE || 'exact').toLowerCase();
 
-    if (allowlist.length === 0) {
+    if (!allowlistRaw.trim()) {
         return true;
     }
 
-    const hostname = url.hostname.toLowerCase();
-    return allowlist.some((allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`));
+    if (mode === 'prefix') {
+        const allowlist = allowlistRaw
+            .split(',')
+            .map((entry) => extractHostname(entry))
+            .filter((entry): entry is string => Boolean(entry));
+
+        if (allowlist.length === 0) {
+            return true;
+        }
+
+        const hostname = url.hostname.toLowerCase();
+        return allowlist.some((allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`));
+    }
+
+    const allowlistExact = allowlistRaw
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+
+    return allowlistExact.includes(redirectUri);
 };

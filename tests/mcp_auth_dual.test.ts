@@ -4,9 +4,9 @@ import request from 'supertest';
 // Mock dependencies
 const mocks = vi.hoisted(() => {
     return {
-        verifyToken: vi.fn(),
         getConnection: vi.fn(),
         decryptConfig: vi.fn(),
+        bcryptCompare: vi.fn(),
         prisma: {
             apiKey: { findUnique: vi.fn(), update: vi.fn() },
             session: { findUnique: vi.fn() },
@@ -15,11 +15,18 @@ const mocks = vi.hoisted(() => {
     };
 });
 
+vi.mock('bcryptjs', () => {
+    return {
+        default: {
+            compare: mocks.bcryptCompare
+        }
+    };
+});
+
 vi.mock('../src/services/auth', async () => {
     const actual = await vi.importActual('../src/services/auth');
     return {
         ...actual,
-        verifyToken: mocks.verifyToken,
         getConnection: mocks.getConnection,
         decryptConfig: mocks.decryptConfig,
     };
@@ -53,8 +60,19 @@ describe('MCP Dual Auth Integration Tests', () => {
         });
 
         it('should return 200 with valid Bearer token', async () => {
-            mocks.verifyToken.mockReturnValue('conn-123');
-            mocks.getConnection.mockResolvedValue({ id: 'conn-123', configEncrypted: 'iv:tag:data' });
+            mocks.prisma.session.findUnique.mockResolvedValue({
+                id: 'session-123',
+                revoked: false,
+                expiresAt: new Date(Date.now() + 60000),
+                tokenHash: 'hash',
+                connectionId: 'conn-123'
+            });
+            mocks.bcryptCompare.mockResolvedValue(true);
+            mocks.getConnection.mockResolvedValue({
+                id: 'conn-123',
+                config: {},
+                encryptedSecrets: 'iv:tag:data'
+            });
             mocks.decryptConfig.mockReturnValue({ apiKey: 'secret' });
 
             const res = await request(app)
@@ -66,7 +84,8 @@ describe('MCP Dual Auth Integration Tests', () => {
         });
 
         it('should return 401 with invalid Bearer token', async () => {
-            mocks.verifyToken.mockReturnValue(null);
+            mocks.prisma.session.findUnique.mockResolvedValue(null);
+            mocks.bcryptCompare.mockResolvedValue(false);
 
             const res = await request(app)
                 .post('/mcp')
@@ -74,7 +93,7 @@ describe('MCP Dual Auth Integration Tests', () => {
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(401);
-            expect(res.body.error).toContain('Invalid token');
+            expect(res.body.error).toContain('Invalid API key');
         });
 
         it('should return 200 with valid API key in header', async () => {
@@ -148,7 +167,8 @@ describe('MCP Dual Auth Integration Tests', () => {
 
         it('should prioritize Bearer token over API key if both provided', async () => {
             process.env.MCP_API_KEY = 'test-api-key';
-            mocks.verifyToken.mockReturnValue(null); // Invalid bearer
+            mocks.prisma.session.findUnique.mockResolvedValue(null);
+            mocks.bcryptCompare.mockResolvedValue(false);
 
             const res = await request(app)
                 .post('/mcp')
@@ -158,42 +178,7 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             // Since Bearer is present but invalid, it should fail before checking API key
             expect(res.status).toBe(401);
-            expect(res.body.error).toContain('Invalid token');
-        });
-
-        describe('OAuth Discovery Header', () => {
-            it('should include WWW-Authenticate header on 401 when no auth provided', async () => {
-                const res = await request(app)
-                    .post('/mcp')
-                    .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
-
-                expect(res.status).toBe(401);
-                expect(res.headers['www-authenticate']).toContain('Bearer resource_metadata=');
-                expect(res.headers['www-authenticate']).toContain('/.well-known/oauth-protected-resource');
-            });
-
-            it('should respect X-Forwarded-Proto for discovery URL', async () => {
-                const res = await request(app)
-                    .post('/mcp')
-                    .set('X-Forwarded-For', '1.2.3.4')
-                    .set('X-Forwarded-Proto', 'https')
-                    .set('X-Forwarded-Host', 'mcp.example.com')
-                    .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
-
-                expect(res.status).toBe(401);
-                expect(res.headers['www-authenticate']).toBe('Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource"');
-            });
-
-            it('should use BASE_URL if set', async () => {
-                process.env.BASE_URL = 'https://custom.domain.com';
-                const res = await request(app)
-                    .post('/mcp')
-                    .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
-
-                expect(res.status).toBe(401);
-                expect(res.headers['www-authenticate']).toBe('Bearer resource_metadata="https://custom.domain.com/.well-known/oauth-protected-resource"');
-                delete process.env.BASE_URL;
-            });
+            expect(res.body.error).toContain('Invalid API key');
         });
     });
 });

@@ -1,9 +1,14 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../db';
+import { createLogger } from '../logger';
 import { getMasterKeyBytes } from '../utils/masterKey';
 
 const ALGORITHM = 'aes-256-gcm';
+const logger = createLogger('services:auth');
+
+const getErrorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : 'Unknown error';
 
 // --- Crypto Helpers ---
 
@@ -45,7 +50,7 @@ export const decryptConfig = (encryptedString: string): any => {
         let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
         return JSON.parse(decrypted);
-    } catch (e) {
+    } catch (primaryError) {
         // Fallback for legacy key derivation (padding/truncating)
         // Explicitly handle "insecure-master-key-must-be-32-bytes-long" case or any key that was processed differently
 
@@ -66,9 +71,12 @@ export const decryptConfig = (encryptedString: string): any => {
             decipher.setAuthTag(authTag);
             let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
             decrypted += decipher.final('utf8');
+            logger.warn({ err: getErrorMessage(primaryError) }, 'Primary decrypt failed; using legacy key derivation');
             return JSON.parse(decrypted);
-        } catch (e2) {
-            throw new Error('Failed to decrypt config');
+        } catch (legacyError) {
+            throw new Error(
+                `Failed to decrypt config (primary: ${getErrorMessage(primaryError)}; legacy: ${getErrorMessage(legacyError)})`
+            );
         }
     }
 };

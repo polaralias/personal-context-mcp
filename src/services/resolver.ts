@@ -111,7 +111,7 @@ export class StatusResolver {
     let location: Location | null = null;
     if (latestLocationEvent) {
         const isExpired = latestLocationEvent.expiresAt
-          ? latestLocationEvent.expiresAt <= now
+          ? latestLocationEvent.expiresAt < now
           : false;
         const isStale = now.getTime() - latestLocationEvent.createdAt.getTime() > locationStaleMs;
         if (isExpired || isStale) {

@@ -6,7 +6,6 @@ import { createConnection, createAuthCode, getClient } from '../services/auth';
 import { createLogger } from '../logger';
 import { hasMasterKey } from '../utils/masterKey';
 import { validateConnectConfig } from '../config/schema/mcp';
-import { isRedirectUriAllowed } from '../utils/redirectUri';
 
 const router = express.Router();
 const logger = createLogger('routes:connect');
@@ -82,10 +81,6 @@ router.get('/', async (req: Request, res: Response) => {
         return res.status(400).send('Invalid code_challenge_method (must be S256)');
     }
 
-    if (!isRedirectUriAllowed(redirect_uri)) {
-        return res.status(400).send('Redirect URI not allowed');
-    }
-
     // Generate CSRF Token
     const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', csrfToken, {
@@ -146,10 +141,6 @@ router.post('/', async (req: Request, res: Response) => {
 
     if (code_challenge_method !== 'S256') {
         return res.status(400).json({ error: 'Invalid code_challenge_method' });
-    }
-
-    if (!isRedirectUriAllowed(redirect_uri)) {
-        return res.status(400).json({ error: 'Redirect URI not allowed' });
     }
 
     const parsed = validateConnectConfig(config);

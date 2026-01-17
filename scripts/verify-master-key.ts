@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getMasterKeyBytes } from './src/utils/masterKey';
+import { getMasterKeyBytes } from '../src/utils/masterKey';
 
 async function runTests() {
     console.log('--- Starting Master Key Derivation Logic Verification ---');

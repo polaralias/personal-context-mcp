@@ -11,9 +11,10 @@ import { startJobs } from './jobs';
 import { runMigrations } from './db';
 import { requestLogger } from './middleware/logger';
 import { createLogger } from './logger';
-import { hasMasterKey, getMasterKeyInfo } from './utils/masterKey';
+import { getMasterKeyInfo } from './utils/masterKey';
 import { getConnectSchema, getUserBoundSchema } from './config/schema/mcp';
 import apiKeyRoutes from './routes/api-keys';
+import metricsRoutes, { metrics } from './routes/metrics';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,9 +22,31 @@ const logger = createLogger('server');
 
 app.set('trust proxy', true);
 
+app.use((req, res, next) => {
+  if (req.secure) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Support form data
 app.use(requestLogger);
+app.use((req, res, next) => {
+  if (req.path === '/metrics') {
+    return next();
+  }
+
+  metrics.requests_total += 1;
+  metrics.requests_in_flight += 1;
+  res.on('finish', () => {
+    metrics.requests_in_flight -= 1;
+    if (res.statusCode >= 400) {
+      metrics.errors_total += 1;
+    }
+  });
+  next();
+});
 
 // Simple cookie parser middleware for CSRF if needed (routes/connect.ts does its own parsing in my implementation, but good to have globally if needed)
 app.use((req, _res, next) => {
@@ -65,6 +88,9 @@ app.get('/api/connect-schema', (_req, res) => {
   res.json(getConnectSchema());
 });
 
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // API Keys - Standardized mounting
 app.use('/api/api-keys', apiKeyRoutes);
@@ -77,6 +103,8 @@ app.get('/', (req, res) => {
 });
 
 // OAuth Routes
+// Add before OAuth routes
+app.use('/metrics', metricsRoutes);
 app.use('/connect', connectRoutes);
 app.use('/token', tokenRoutes);
 app.use('/register', registerRoutes);
@@ -88,9 +116,18 @@ app.all('/key=:apiKey', authenticateMcp, handleMcpRequest);
 app.all('/key=:apiKey/mcp', authenticateMcp, handleMcpRequest);
 
 if (require.main === module) {
-  if (!hasMasterKey()) {
+  const keyInfo = getMasterKeyInfo();
+  if (keyInfo.status !== 'present') {
     logger.error('MASTER_KEY is missing. Refusing to start.');
     process.exit(1);
+  }
+
+  if (keyInfo.isInsecureDefault) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('MASTER_KEY is set to the insecure default. Refusing to start in production.');
+      process.exit(1);
+    }
+    logger.warn('SECURITY WARNING: Using insecure default MASTER_KEY (development only).');
   }
 
   runMigrations()

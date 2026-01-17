@@ -31,7 +31,7 @@ The server is configured via environment variables.
 *   `REDIRECT_URI_ALLOWLIST_MODE`: Validation mode for redirect URIs.
     *   `exact` (default): Exact match required.
     *   `prefix`: Starts with match required.
-*   `CODE_TTL_SECONDS`: Time-to-live for auth codes (default: 300).
+*   `CODE_TTL_SECONDS`: Time-to-live for auth codes (default: 90).
 *   `TOKEN_TTL_SECONDS`: Time-to-live for access tokens (default: 3600).
 *   `GOOGLE_API_KEY`: API Key for Google services (can be set here or via UI).
 *   `GOOGLE_POLL_CRON`: Cron schedule for polling Google (default: `0 0 * * *`).
@@ -49,10 +49,10 @@ Standard OAuth 2.0 Authorization Code Flow + PKCE. Use the `/connect` UI to gene
 **Header:** `Authorization: Bearer <access_token>`
 
 ### 2. API Key (Fallback)
-A simple API key method for clients that do not support OAuth flows.
+A simple API key method for clients that do not support OAuth flows. Query-string auth is a potential route for clients that cannot send headers, but it is not recommended.
 
 **Header:** `x-api-key: <api_key>`
-**Query Param:** `?apiKey=<api_key>`
+**Query Param:** `?apiKey=<api_key>` (not recommended)
 
 #### Examples
 
@@ -64,7 +64,7 @@ curl -X POST http://localhost:3010/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
 
-**Using curl (Query Param):**
+**Using curl (Query Param, not recommended):**
 ```bash
 curl -X POST "http://localhost:3010/mcp?apiKey=your-api-key" \
   -H "Content-Type: application/json" \
@@ -241,6 +241,8 @@ Authorization: Bearer sk_mcp_...
 ```
 X-API-Key: sk_mcp_...
 ```
+
+Query-string keys are supported for clients that cannot send headers, but this is not recommended.
 
 The server will automatically load your specific configuration (e.g., your personal Google Maps key) for requests made with this key.
 

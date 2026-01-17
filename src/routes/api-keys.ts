@@ -12,8 +12,8 @@ const issueRateLimit = new Map<string, { count: number; timestamp: number }>();
 const ISSUE_WINDOW_MS = parseInt(process.env.API_KEY_ISSUE_WINDOW_SECONDS || '3600') * 1000;
 const ISSUE_MAX_REQUESTS = parseInt(process.env.API_KEY_ISSUE_RATELIMIT || '3');
 
-const checkRateLimit = (req: Request): boolean => {
-    const ip = req.ip || 'unknown';
+const checkRateLimit = (_req: Request): boolean => {
+    const ip = _req.ip || 'unknown';
     const now = Date.now();
     const limit = issueRateLimit.get(ip);
 
@@ -35,18 +35,18 @@ const checkRateLimit = (req: Request): boolean => {
     return true;
 };
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (_req: Request, res: Response) => {
     // API_KEY_MODE check removed to enable user-bound keys by default
 
     if (!hasMasterKey()) {
         return res.status(500).json({ error: 'Server not configured (MASTER_KEY missing)' });
     }
 
-    if (!checkRateLimit(req)) {
+    if (!checkRateLimit(_req)) {
         return res.status(429).json({ error: 'Too many requests' });
     }
 
-    const config = req.body;
+    const config = _req.body;
 
     const parsed = validateUserBoundConfig(config);
     if (!parsed.success) {

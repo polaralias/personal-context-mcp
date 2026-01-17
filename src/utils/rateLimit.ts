@@ -9,14 +9,17 @@ interface RateLimitEntry {
 
 export class RateLimiter {
     private limits = new Map<string, RateLimitEntry>();
+    private cleanupTimer: NodeJS.Timeout | null = null;
 
     constructor(
         private windowSeconds: number,
         private limit: number,
-        cleanupIntervalSeconds: number = 600
+        private _cleanupIntervalSeconds: number = 600
     ) {
         // Periodic cleanup of expired entries
-        setInterval(() => this.cleanup(), cleanupIntervalSeconds * 1000).unref();
+        if (this._cleanupIntervalSeconds > 0) {
+            this.startCleanup();
+        }
     }
 
     /**
@@ -48,6 +51,16 @@ export class RateLimiter {
                 this.limits.delete(key);
             }
         }
+    }
+
+    public stopCleanup(): void {
+        if (!this.cleanupTimer) return;
+        clearInterval(this.cleanupTimer);
+        this.cleanupTimer = null;
+    }
+
+    private startCleanup(): void {
+        this.cleanupTimer = setInterval(() => this.cleanup(), this._cleanupIntervalSeconds * 1000);
     }
 }
 
