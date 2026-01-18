@@ -7,37 +7,34 @@ services:
     ports:
       - "3010:3000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/mcp
-      - GOOGLE_API_KEY=dummy
-      - GOOGLE_POLL_CRON=0 0 * * *
+      DATABASE_URL: postgresql://${PERSONAL_POSTGRES_USER:-user}:${PERSONAL_POSTGRES_PASSWORD:-password}@db:5432/${PERSONAL_POSTGRES_DB:-mcp}
+      GOOGLE_API_KEY: ${PERSONAL_GOOGLE_API_KEY:-dummy}
+      GOOGLE_POLL_CRON: ${PERSONAL_GOOGLE_POLL_CRON:-0 0 * * *}
       # MASTER_KEY: 64 hex characters (32 bytes) or a strong passphrase.
       # Generate with: openssl rand -hex 32
-      # - MASTER_KEY=<your-64-character-hex-key>
+      MASTER_KEY: ${PERSONAL_MASTER_KEY:-}
       # REDIRECT_URI_ALLOWLIST: Comma-separated list of allowed redirect URIs.
-      # Default prefixes for ChatGPT, OpenAI, and local development.
-      - REDIRECT_URI_ALLOWLIST=https://chatgpt.com/,https://chat.openai.com/,http://localhost:3010/,http://localhost:3000/
-      # Optional: Set mode to 'exact' or 'prefix' (default)
-      - REDIRECT_URI_ALLOWLIST_MODE=prefix
+      REDIRECT_URI_ALLOWLIST: ${PERSONAL_REDIRECT_URI_ALLOWLIST:-https://chatgpt.com/,https://chat.openai.com/,http://localhost:3010/,http://localhost:3000/}
+      REDIRECT_URI_ALLOWLIST_MODE: ${PERSONAL_REDIRECT_URI_ALLOWLIST_MODE:-prefix}
       # API Key Mode: disabled (default), global, or user_bound
-      - API_KEY_MODE=disabled
+      API_KEY_MODE: ${PERSONAL_API_KEY_MODE:-disabled}
       # Rate Limiting
-      - API_KEY_ISSUE_RATELIMIT=3
-      - API_KEY_ISSUE_WINDOW_SECONDS=3600
-      - MCP_RATELIMIT_PER_KEY=60
-      - MCP_RATELIMIT_WINDOW_SECONDS=60
+      API_KEY_ISSUE_RATELIMIT: ${PERSONAL_API_KEY_ISSUE_RATELIMIT:-3}
+      API_KEY_ISSUE_WINDOW_SECONDS: ${PERSONAL_API_KEY_ISSUE_WINDOW_SECONDS:-3600}
+      MCP_RATELIMIT_PER_KEY: ${PERSONAL_MCP_RATELIMIT_PER_KEY:-60}
+      MCP_RATELIMIT_WINDOW_SECONDS: ${PERSONAL_MCP_RATELIMIT_WINDOW_SECONDS:-60}
       # Optional TTL overrides
-      # - CODE_TTL_SECONDS=300
-      # - TOKEN_TTL_SECONDS=3600
-      # - TEST_BYPASS_TURNSTILE=true
+      CODE_TTL_SECONDS: ${PERSONAL_CODE_TTL_SECONDS:-90}
+      TOKEN_TTL_SECONDS: ${PERSONAL_TOKEN_TTL_SECONDS:-3600}
     depends_on:
       - db
 
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=mcp
+      POSTGRES_USER: ${PERSONAL_POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${PERSONAL_POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${PERSONAL_POSTGRES_DB:-mcp}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
