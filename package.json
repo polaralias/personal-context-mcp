@@ -26,6 +26,9 @@
     "url": "https://github.com/polaralias/personal-context-mcp/issues"
   },
   "homepage": "https://github.com/polaralias/personal-context-mcp#readme",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",

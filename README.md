@@ -137,6 +137,7 @@ The script will exchange the code for a token and verify access to the `/mcp` en
 ## Development
 
 ```bash
+# Requires Node.js >= 18.18 (Prisma 6)
 # Install dependencies
 npm install
 
