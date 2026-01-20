@@ -7,6 +7,6 @@ import { Request } from 'express';
 export function normalizeAcceptHeader(req: Request): void {
     const accept = req.headers.accept;
     if (!accept || accept === '*/*') {
-        req.headers.accept = 'application/json';
+        req.headers.accept = 'application/json, text/event-stream';
     }
 }
