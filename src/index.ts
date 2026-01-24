@@ -105,9 +105,10 @@ app.get('/', (req, res) => {
 // OAuth Routes
 // Add before OAuth routes
 app.use('/metrics', metricsRoutes);
-app.use('/connect', connectRoutes);
-app.use('/token', tokenRoutes);
-app.use('/register', registerRoutes);
+app.use('/oauth', connectRoutes);
+app.use('/oauth/token', tokenRoutes);
+app.use('/oauth/register', registerRoutes);
+app.use('/oauth/.well-known', wellKnownRoutes);
 app.use('/.well-known', wellKnownRoutes);
 
 // MCP Streamable HTTP endpoint

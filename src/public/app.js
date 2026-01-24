@@ -5,6 +5,13 @@ const redirectUri = urlParams.get('redirect_uri') || urlParams.get('callback_url
 const state = urlParams.get('state');
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Update OAuth URL display
+    const oauthDisplay = document.getElementById('oauth-url-display');
+    if (oauthDisplay) {
+        const fullUrl = window.location.origin + '/oauth';
+        oauthDisplay.innerText = fullUrl;
+    }
+
     try {
         const res = await fetch(`${API_BASE}/config-schema`);
         if (res.ok) {

@@ -18,16 +18,26 @@ const getBaseUrl = (req: Request): string => {
     return `${protocol}://${host}`;
 };
 
-router.get('/mcp', (req: Request, res: Response) => {
+router.get(['/mcp', '/mcp-configuration'], (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
-    res.json({
-        mcp_endpoint: `${baseUrl}/mcp`,
-        config_endpoint: `${baseUrl}/.well-known/mcp-config`,
-        oauth_protected_resource: `${baseUrl}/.well-known/oauth-protected-resource`
-    });
+    // Determine if this is coming from the /oauth mount point
+    const isOAuthDiscovery = req.baseUrl.startsWith('/oauth');
+
+    const response: any = {
+        mcp_endpoint: `${baseUrl}/mcp`
+    };
+
+    if (isOAuthDiscovery) {
+        response.oauth_protected_resource = `${baseUrl}/oauth/.well-known/oauth-protected-resource`;
+    } else {
+        // Root baseURL discovery returns the config_endpoint for API keys
+        response.config_endpoint = `${baseUrl}/.well-known/mcp-config`;
+    }
+
+    res.json(response);
 });
 
-router.get('/mcp-config', (_req, res) => {
+router.get(['/mcp-config', '/mcp-configuration-schema'], (_req, res) => {
     res.json(getUserBoundSchema());
 });
 
@@ -35,7 +45,7 @@ router.get('/oauth-protected-resource', (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
     res.json({
         resource: `${baseUrl}/mcp`,
-        authorization_servers: [baseUrl]
+        authorization_servers: [baseUrl + '/oauth']
     });
 });
 
@@ -43,9 +53,9 @@ router.get('/oauth-authorization-server', (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
     res.json({
         issuer: baseUrl,
-        authorization_endpoint: `${baseUrl}/connect`,
-        token_endpoint: `${baseUrl}/token`,
-        registration_endpoint: `${baseUrl}/register`,
+        authorization_endpoint: `${baseUrl}/oauth`,
+        token_endpoint: `${baseUrl}/oauth/token`,
+        registration_endpoint: `${baseUrl}/oauth/register`,
         response_types_supported: ["code"],
         grant_types_supported: ["authorization_code"],
         code_challenge_methods_supported: ["S256"],

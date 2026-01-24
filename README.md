@@ -71,24 +71,19 @@ curl -X POST "http://localhost:3010/mcp?apiKey=your-api-key" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
 
-**Using PowerShell:**
-```powershell
-$body = @{
-    jsonrpc = "2.0"
-    method = "tools/list"
-    id = 1
-} | ConvertTo-Json
+## Discovery Endpoints
 
-Invoke-WebRequest -Uri "http://localhost:3010/mcp" -Method Post -Body $body -ContentType "application/json" -Headers @{ "x-api-key" = "your-api-key" }
-```
+The server exposes standard MCP and OAuth 2.0 discovery endpoints. The behavior depends on the base URL used for discovery:
 
-## OAuth Discovery
+### 1. API Key Discovery (Root URL)
+When a client connects to the **Base URL** (e.g. `https://mcp.yourdomain.com`), it prioritizes the API key configuration flow.
+*   `GET /.well-known/mcp`: Returns `config_endpoint` for user-bound API key setup.
+*   `GET /.well-known/mcp-configuration`: Alias for compatibility.
 
-The server exposes standard OAuth 2.0 discovery endpoints:
-
-*   `GET /.well-known/oauth-protected-resource`: Identifies the resource and authorization server.
-*   `GET /.well-known/oauth-authorization-server`: Advertises endpoints and supported methods. Included `registration_endpoint` for DCR.
-*   `GET /.well-known/mcp-config`: Standardized configuration schema.
+### 2. OAuth Discovery (`/oauth` Path)
+When a client connects to the **OAuth URL** (e.g. `https://mcp.yourdomain.com/oauth`), it prioritizes the secure OAuth 2.0 flow.
+*   `GET /oauth/.well-known/mcp`: Returns `oauth_protected_resource` to trigger OAuth.
+*   `GET /oauth/.well-known/oauth-authorization-server`: Advertises OAuth endpoints.
 
 ## Dynamic Client Registration (RFC 7591)
 
@@ -96,10 +91,10 @@ The server supports RFC 7591 Dynamic Client Registration, allowing clients like 
 
 ### Verification
 
-1.  **Check Metadata:** `GET /.well-known/oauth-authorization-server` should contain `"registration_endpoint": "https://<your-domain>/register"`.
+1.  **Check Metadata:** `GET /oauth/.well-known/oauth-authorization-server` should contain `"registration_endpoint": "https://<your-domain>/oauth/register"`.
 2.  **Test Registration:**
     ```bash
-    curl -X POST https://<your-domain>/register \
+    curl -X POST https://<your-domain>/oauth/register \
       -H "Content-Type: application/json" \
       -d '{
         "redirect_uris": ["https://<your-domain>/callback"],
@@ -117,22 +112,6 @@ A comprehensive smoke test for DCR and OAuth is available at `scripts/dcr-smoke-
 3.  The script will register a new client and provide an authorization URL.
 4.  Open the URL in your browser, complete the setup, and copy the resulting `code`.
 5.  Paste the `code` back into the script to complete the token exchange and verify `/mcp` access.
-
-## Smoke Test
-
-To verify the server is working correctly, you can run the provided PowerShell smoke test.
-
-1.  Open `http://localhost:3010/connect?redirect_uri=http://localhost:3010&state=123&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256` in your browser (adjust params as needed).
-2.  Complete the configuration steps.
-3.  Copy the `code` from the redirect URL.
-4.  Run `scripts/smoke-test.ps1`.
-5.  Enter the required details when prompted:
-    *   Base URL: `http://localhost:3010`
-    *   Code: (The code you copied)
-    *   Code Verifier: `dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk` (matches the challenge above)
-    *   Redirect URI: `http://localhost:3010`
-
-The script will exchange the code for a token and verify access to the `/mcp` endpoint.
 
 ## Development
 
