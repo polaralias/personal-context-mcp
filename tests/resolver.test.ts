@@ -2,29 +2,29 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mocks
 const mocks = vi.hoisted(() => {
-  return {
-    prisma: {
-      workStatusEvent: {
-        findMany: vi.fn(),
-        findFirst: vi.fn(),
-      },
-      locationEvent: {
-        findFirst: vi.fn(),
-      },
-      scheduledStatus: {
-        findUnique: vi.fn(),
-      },
-      bankHolidayCache: {
-        findUnique: vi.fn(),
-        upsert: vi.fn(),
-      }
-    },
-    holidayService: {
-        isBankHoliday: vi.fn(),
-        fetchHolidays: vi.fn(),
-        getInstance: vi.fn(),
-    }
-  };
+    return {
+        prisma: {
+            workStatusEvent: {
+                findMany: vi.fn(),
+                findFirst: vi.fn(),
+            },
+            locationEvent: {
+                findFirst: vi.fn(),
+            },
+            scheduledStatus: {
+                findUnique: vi.fn(),
+            },
+            bankHolidayCache: {
+                findUnique: vi.fn(),
+                upsert: vi.fn(),
+            }
+        },
+        holidayService: {
+            isBankHoliday: vi.fn(),
+            fetchHolidays: vi.fn(),
+            getInstance: vi.fn(),
+        }
+    };
 });
 
 // Mock dependencies
@@ -41,9 +41,15 @@ describe('StatusResolver', () => {
     let resolver: StatusResolver;
 
     beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2023-10-02T12:00:00Z')); // Monday
         vi.clearAllMocks();
         resolver = StatusResolver.getInstance();
         mocks.holidayService.isBankHoliday.mockResolvedValue(false);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it('should default to "off" if no events', async () => {
@@ -65,7 +71,7 @@ describe('StatusResolver', () => {
     });
 
     it('should use latest valid unexpired temporary event', async () => {
-         mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
+        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
             { status: 'travel', createdAt: new Date(), expiresAt: new Date(Date.now() + 10000) }
         );
 
@@ -105,10 +111,10 @@ describe('StatusResolver', () => {
     });
 
     it('should respect scheduled overrides on weekends', async () => {
-         const date = new Date('2023-10-01T12:00:00Z'); // Sunday
-         const dateString = '2023-10-01';
+        const date = new Date('2023-10-01T12:00:00Z'); // Sunday
+        const dateString = '2023-10-01';
 
-         mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
+        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
             { status: 'working', createdAt: new Date(), expiresAt: null }
         );
 
@@ -123,25 +129,25 @@ describe('StatusResolver', () => {
     });
 
     it('should apply active TTL override for NOW even if scheduled is different', async () => {
-         const date = new Date(); // NOW
+        const date = new Date(); // NOW
 
-         // Base is off - mocked by the "Valid Base" query
-         mocks.prisma.workStatusEvent.findFirst.mockImplementation((args) => {
-             // Differentiate the two calls to findFirst
-             // 1. findLatestValidWorkEvent calls findFirst with a 'where' clause
-             if (args && args.where) {
-                 return Promise.resolve({ status: 'off', createdAt: new Date(), expiresAt: null });
-             }
-             // 2. The "TTL override" check calls findFirst without 'where' (just orderBy)
-             return Promise.resolve({
-                 status: 'travel',
-                 createdAt: new Date(),
-                 expiresAt: new Date(Date.now() + 3600000)
+        // Base is off - mocked by the "Valid Base" query
+        mocks.prisma.workStatusEvent.findFirst.mockImplementation((args) => {
+            // Differentiate the two calls to findFirst
+            // 1. findLatestValidWorkEvent calls findFirst with a 'where' clause
+            if (args && args.where) {
+                return Promise.resolve({ status: 'off', createdAt: new Date(), expiresAt: null });
+            }
+            // 2. The "TTL override" check calls findFirst without 'where' (just orderBy)
+            return Promise.resolve({
+                status: 'travel',
+                createdAt: new Date(),
+                expiresAt: new Date(Date.now() + 3600000)
             });
-         });
+        });
 
-         // Scheduled is working
-         mocks.prisma.scheduledStatus.findUnique.mockResolvedValue({
+        // Scheduled is working
+        mocks.prisma.scheduledStatus.findUnique.mockResolvedValue({
             date: date.toISOString().split('T')[0],
             patch: { workStatus: 'working' }
         });

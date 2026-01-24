@@ -51,24 +51,24 @@ const verifyAccessToken = async (token: string): Promise<string | null> => {
 };
 
 export const authenticateMcp = async (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers['authorization'];
-    const apiKeyHeader = req.headers['x-api-key'] as string;
-    const apiKeyQuery = req.query.apiKey as string;
+    const authHeader = req.headers['authorization'] as string;
+    const apiKeyHeader = (req.headers['x-api-key'] || req.headers['api-key'] || req.headers['x-mcp-key']) as string;
+    const apiKeyQuery = (req.query.apiKey || req.query.api_key || req.query.key) as string;
     const apiKeyParam = req.params.apiKey as string;
 
-
     let candidateKey: string | null = null;
-    let isBearer = false;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        candidateKey = authHeader.slice(7);
-        isBearer = true;
-    } else if (apiKeyHeader) {
-        candidateKey = apiKeyHeader;
-    } else if (apiKeyQuery) {
-        candidateKey = apiKeyQuery;
-    } else if (apiKeyParam) {
-        candidateKey = apiKeyParam;
+    if (authHeader) {
+        if (authHeader.toLowerCase().startsWith('bearer ')) {
+            candidateKey = authHeader.slice(7);
+        } else {
+            // Support direct 'Authorization: <key>'
+            candidateKey = authHeader;
+        }
+    }
+
+    if (!candidateKey) {
+        candidateKey = apiKeyHeader || apiKeyQuery || apiKeyParam;
     }
 
     if (candidateKey) {
@@ -105,22 +105,20 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
             }
         }
 
-        // 2. Check OAuth / Session (Bearer only)
-        if (isBearer) {
-            const connectionId = await verifyAccessToken(candidateKey);
-            if (connectionId) {
-                try {
-                    const connection = await getConnection(connectionId);
-                    if (connection) {
-                        // Merge public config and decrypted secrets
-                        const secrets = decryptConfig(connection.encryptedSecrets);
-                        const config = { ...(connection.config as object), ...secrets };
-                        req.mcpConfig = config;
-                        return next();
-                    }
-                } catch (error) {
-                    logger.error({ err: error }, 'Error authenticating with Bearer token');
+        // 2. Check OAuth / Session (Bearer only or direct fallback)
+        const connectionId = await verifyAccessToken(candidateKey);
+        if (connectionId) {
+            try {
+                const connection = await getConnection(connectionId);
+                if (connection) {
+                    // Merge public config and decrypted secrets
+                    const secrets = decryptConfig(connection.encryptedSecrets);
+                    const config = { ...(connection.config as object), ...secrets };
+                    req.mcpConfig = config;
+                    return next();
                 }
+            } catch (error) {
+                logger.error({ err: error }, 'Error authenticating with session token');
             }
         }
 

@@ -103,7 +103,7 @@ const userBoundSchema = z
         haToken: z.string().optional(),
         haEntityId: z.string().optional()
     })
-    .strict();
+    .passthrough();
 
 const connectSchema = z
     .object({
@@ -113,7 +113,7 @@ const connectSchema = z
         haToken: z.string().optional(),
         haEntityId: z.string().optional()
     })
-    .strict();
+    .passthrough();
 
 export const getUserBoundSchema = () => ({ fields: userBoundFields });
 

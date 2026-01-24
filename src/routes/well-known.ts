@@ -1,7 +1,9 @@
 import express, { Request, Response } from 'express';
 import { getUserBoundSchema } from '../config/schema/mcp';
+import { createLogger } from '../logger';
 
 const router = express.Router();
+const logger = createLogger('routes:well-known');
 
 const getBaseUrl = (req: Request): string => {
     if (process.env.BASE_URL) {
@@ -20,19 +22,11 @@ const getBaseUrl = (req: Request): string => {
 
 router.get(['/mcp', '/mcp-configuration'], (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
-    // Determine if this is coming from the /oauth mount point
-    const isOAuthDiscovery = req.baseUrl.startsWith('/oauth');
-
     const response: any = {
-        mcp_endpoint: `${baseUrl}/mcp`
+        mcp_endpoint: `${baseUrl}/mcp`,
+        config_endpoint: `${baseUrl}/.well-known/mcp-config`,
+        oauth_protected_resource: `${baseUrl}/.well-known/oauth-protected-resource`
     };
-
-    if (isOAuthDiscovery) {
-        response.oauth_protected_resource = `${baseUrl}/oauth/.well-known/oauth-protected-resource`;
-    } else {
-        // Root baseURL discovery returns the config_endpoint for API keys
-        response.config_endpoint = `${baseUrl}/.well-known/mcp-config`;
-    }
 
     res.json(response);
 });
@@ -51,15 +45,23 @@ router.get('/oauth-protected-resource', (req: Request, res: Response) => {
 
 router.get('/oauth-authorization-server', (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
+
+    // Support version-specific response if header present
+    const protocolVersion = req.headers['mcp-protocol-version'];
+    if (protocolVersion) {
+        logger.debug({ protocolVersion }, 'Discovery request with specific MCP protocol version');
+    }
+
     res.json({
         issuer: baseUrl,
-        authorization_endpoint: `${baseUrl}/oauth`,
-        token_endpoint: `${baseUrl}/oauth/token`,
-        registration_endpoint: `${baseUrl}/oauth/register`,
+        authorization_endpoint: `${baseUrl}/oauth`, // Adhere to user request for /oauth
+        token_endpoint: `${baseUrl}/token`,         // Standard path
+        registration_endpoint: `${baseUrl}/register`, // Standard path
         response_types_supported: ["code"],
-        grant_types_supported: ["authorization_code"],
+        grant_types_supported: ["authorization_code", "client_credentials"],
         code_challenge_methods_supported: ["S256"],
-        token_endpoint_auth_methods_supported: ["none"]
+        token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+        scopes_supported: ["mcp", "offline_access"]
     });
 });
 

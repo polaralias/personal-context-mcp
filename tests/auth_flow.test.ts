@@ -72,7 +72,9 @@ describe('Auth Flow Integration Tests', () => {
                 client_id: 'client-123'
             });
             expect(res.status).toBe(400);
-            expect(res.text).toContain('Redirect URI not allowed');
+            expect(res.text).toContain('isn\'t on the allowlist');
+            expect(res.text).toContain('http://evil.com');
+            expect(res.text).toContain('https://github.com/polaralias/personal-context-mcp');
         });
 
         it('should allow valid redirect_uri', async () => {
@@ -86,7 +88,7 @@ describe('Auth Flow Integration Tests', () => {
                 client_id: 'client-123'
             });
             expect(res.status).toBe(200);
-            expect(res.text).toContain('Create Connection');
+            expect(res.text).toContain('Authorize');
         });
     });
 

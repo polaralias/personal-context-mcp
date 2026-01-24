@@ -284,6 +284,23 @@ import { normalizeAcceptHeader } from '../utils/mcpUtils';
 export const handleMcpRequest = async (req: Request, res: Response) => {
     logger.info({ method: req.method, url: req.url }, "Handling MCP request");
 
+    // Handle Session Termination
+    if (req.method === 'DELETE') {
+        const sessionId = req.headers['mcp-session-id'] as string;
+        if (!sessionId) {
+            return res.status(400).json({ error: "Missing Mcp-Session-Id header" });
+        }
+        if (sessionMap.has(sessionId)) {
+            const transport = sessionMap.get(sessionId)!;
+            transport.close();
+            sessionMap.delete(sessionId);
+            logger.info({ sessionId }, "MCP Session terminated via DELETE");
+            return res.status(200).json({ success: true });
+        } else {
+            return res.status(404).json({ error: "Session not found" });
+        }
+    }
+
     try {
         normalizeAcceptHeader(req);
 
@@ -327,10 +344,17 @@ export const handleMcpRequest = async (req: Request, res: Response) => {
             await transport.handleRequest(req, res, req.body);
         });
 
-    } catch (err) {
+    } catch (err: any) {
         logger.error({ err, requestId: getRequestId(req) }, "MCP Transport error");
         if (!res.headersSent) {
-            res.status(500).json({ error: "Internal Server Error" });
+            res.status(500).json({
+                jsonrpc: "2.0",
+                error: {
+                    code: -32603,
+                    message: "Internal Server Error",
+                    data: { details: err.message }
+                }
+            });
         }
     }
 };

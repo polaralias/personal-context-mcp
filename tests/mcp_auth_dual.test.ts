@@ -53,10 +53,11 @@ describe('MCP Dual Auth Integration Tests', () => {
         it('should return 401 when no auth is provided', async () => {
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(401);
-            expect(res.body.error).toContain('Authentication required');
+            expect(res.body.error.message).toContain('Authentication required');
         });
 
         it('should return 200 with valid Bearer token', async () => {
@@ -77,7 +78,8 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
-                .set('Authorization', 'Bearer valid-token')
+                .set('Accept', 'application/json, text/event-stream')
+                .set('Authorization', 'Bearer session-123:secret')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(200);
@@ -89,11 +91,12 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .set('Authorization', 'Bearer invalid-token')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(401);
-            expect(res.body.error).toContain('Invalid API key');
+            expect(res.body.error.message).toContain('Invalid API key');
         });
 
         it('should return 200 with valid API key in header', async () => {
@@ -101,6 +104,7 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .set('x-api-key', 'test-api-key')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
@@ -112,6 +116,7 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .query({ apiKey: 'test-api-key' })
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
@@ -123,6 +128,7 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .set('x-api-key', 'key2')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
@@ -145,6 +151,7 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .set('x-api-key', mockKey)
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
@@ -158,11 +165,12 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .set('x-api-key', 'wrong-key')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(401);
-            expect(res.body.error).toContain('Invalid API key');
+            expect(res.body.error.message).toContain('Invalid API key');
         });
 
         it('should prioritize Bearer token over API key if both provided', async () => {
@@ -172,13 +180,14 @@ describe('MCP Dual Auth Integration Tests', () => {
 
             const res = await request(app)
                 .post('/mcp')
+                .set('Accept', 'application/json, text/event-stream')
                 .set('Authorization', 'Bearer invalid-token')
                 .set('x-api-key', 'test-api-key')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             // Since Bearer is present but invalid, it should fail before checking API key
             expect(res.status).toBe(401);
-            expect(res.body.error).toContain('Invalid API key');
+            expect(res.body.error.message).toContain('Invalid API key');
         });
     });
 });

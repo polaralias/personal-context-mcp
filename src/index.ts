@@ -26,6 +26,26 @@ app.use((req, res, next) => {
   if (req.secure) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
+
+  // Security: Validate Origin header to prevent DNS rebinding
+  const origin = req.headers.origin || req.headers.referer;
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      // For local development, allow localhost and 127.0.0.1
+      // In production, we should ideally have an allowed list
+      const allowedHosts = ['localhost', '127.0.0.1', process.env.ALLOWED_HOST].filter(Boolean);
+      const isAllowed = allowedHosts.some(host => originUrl.hostname === host || originUrl.hostname.endsWith('.' + host));
+
+      if (!isAllowed && process.env.NODE_ENV === 'production') {
+        logger.warn({ origin: originUrl.hostname }, 'Blocked request from unauthorized origin');
+        return res.status(403).json({ error: 'Origin not allowed' });
+      }
+    } catch (e) {
+      // If URL parsing fails, ignore or block
+    }
+  }
+
   next();
 });
 
@@ -103,11 +123,14 @@ app.get('/', (req, res) => {
 });
 
 // OAuth Routes
-// Add before OAuth routes
 app.use('/metrics', metricsRoutes);
 app.use('/oauth', connectRoutes);
+app.use('/connect', connectRoutes); // Legacy support for tests
+app.use('/authorize', connectRoutes); // Standard fallback
 app.use('/oauth/token', tokenRoutes);
+app.use('/token', tokenRoutes); // Standard fallback
 app.use('/oauth/register', registerRoutes);
+app.use('/register', registerRoutes); // Standard fallback
 app.use('/oauth/.well-known', wellKnownRoutes);
 app.use('/.well-known', wellKnownRoutes);
 
@@ -133,8 +156,11 @@ if (require.main === module) {
 
   runMigrations()
     .then(() => {
-      app.listen(port, () => {
-        logger.info({ port }, 'server started');
+      // In production, you might want to bind to '0.0.0.0', 
+      // but MCP spec recommends localhost for security unless explicitly configured.
+      const host = process.env.HOST || '127.0.0.1';
+      app.listen(Number(port), host, () => {
+        logger.info({ port, host }, 'server started');
         startJobs();
       });
     })

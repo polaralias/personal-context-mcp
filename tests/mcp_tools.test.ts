@@ -22,10 +22,10 @@ vi.mock('../src/services/resolver', () => ({
 vi.mock('../src/services/tracker', () => ({
     TrackerService: {
         getInstance: () => ({
-            setWorkStatus:  mocks.setWorkStatus,
+            setWorkStatus: mocks.setWorkStatus,
             setLocation: mocks.setLocation,
             getLocationHistory: mocks.getLocationHistory,
-            upsertSchedule:  mocks.upsertSchedule,
+            upsertSchedule: mocks.upsertSchedule,
             listSchedules: mocks.listSchedules,
             deleteSchedule: mocks.deleteSchedule,
         })
@@ -34,7 +34,7 @@ vi.mock('../src/services/tracker', () => ({
 
 vi.mock('../src/services/holiday', () => ({
     HolidayService: {
-        getInstance:  () => ({
+        getInstance: () => ({
             fetchHolidays: mocks.fetchHolidays,
             isBankHoliday: vi.fn().mockResolvedValue(false)
         })
@@ -62,7 +62,7 @@ describe('MCP Tools', () => {
                 resolvedAt: '2026-01-17T10:00:00Z',
                 bankHoliday: false,
                 weekend: false,
-                workStatus:  'working',
+                workStatus: 'working',
                 location: null,
                 lastUpdated: '2026-01-17T09:00:00Z'
             };
@@ -70,20 +70,20 @@ describe('MCP Tools', () => {
 
             // Access the tool handler directly
             const tools = (mcpServer as any)._registeredTools;
-            const statusGetTool = tools.get('status_get');
-            
+            const statusGetTool = tools['status_get'];
+
             const result = await statusGetTool.handler({}, {});
-            
+
             expect(result.content[0].type).toBe('text');
             expect(JSON.parse(result.content[0].text)).toEqual(mockStatus);
         });
 
         it('should return error for invalid date format', async () => {
             const tools = (mcpServer as any)._registeredTools;
-            const statusGetTool = tools.get('status_get');
-            
+            const statusGetTool = tools['status_get'];
+
             const result = await statusGetTool.handler({ date: 'not-a-date' }, {});
-            
+
             expect(result.isError).toBe(true);
             expect(result.content[0].text).toContain('Invalid date format');
         });
@@ -97,10 +97,10 @@ describe('MCP Tools', () => {
             mocks.resolveStatus.mockResolvedValue(mockStatus);
 
             const tools = (mcpServer as any)._registeredTools;
-            const statusGetTool = tools.get('status_get');
-            
+            const statusGetTool = tools['status_get'];
+
             await statusGetTool.handler({ date: '2026-01-20' }, {});
-            
+
             expect(mocks.resolveStatus).toHaveBeenCalledWith(expect.any(Date));
         });
     });
@@ -111,8 +111,8 @@ describe('MCP Tools', () => {
             mocks.resolveStatus.mockResolvedValue({ workStatus: 'travel' });
 
             const tools = (mcpServer as any)._registeredTools;
-            const tool = tools.get('status_set_override');
-            
+            const tool = tools['status_set_override'];
+
             const result = await tool.handler({
                 status: 'travel',
                 reason: 'Business trip',
@@ -137,8 +137,8 @@ describe('MCP Tools', () => {
             });
 
             const tools = (mcpServer as any)._registeredTools;
-            const tool = tools.get('status_set_location');
-            
+            const tool = tools['status_set_location'];
+
             await tool.handler({
                 latitude: 51.5074,
                 longitude: -0.1278,
@@ -156,10 +156,10 @@ describe('MCP Tools', () => {
     describe('status_schedule_set', () => {
         it('should reject invalid date format', async () => {
             const tools = (mcpServer as any)._registeredTools;
-            const tool = tools.get('status_schedule_set');
-            
+            const tool = tools['status_schedule_set'];
+
             const result = await tool.handler({ date: '17-01-2026' }, {});
-            
+
             expect(result.isError).toBe(true);
             expect(result.content[0].text).toContain('Invalid date format');
         });
@@ -168,8 +168,8 @@ describe('MCP Tools', () => {
             mocks.upsertSchedule.mockResolvedValue({ date: '2026-01-20' });
 
             const tools = (mcpServer as any)._registeredTools;
-            const tool = tools.get('status_schedule_set');
-            
+            const tool = tools['status_schedule_set'];
+
             const result = await tool.handler({
                 date: '2026-01-20',
                 workStatus: 'off',
@@ -186,14 +186,14 @@ describe('MCP Tools', () => {
     describe('holidays_list', () => {
         it('should return holidays for default region', async () => {
             const mockHolidays = [
-                { title: 'New Year', date:  '2026-01-01' },
+                { title: 'New Year', date: '2026-01-01' },
                 { title: 'Easter Monday', date: '2026-04-06' }
             ];
             mocks.fetchHolidays.mockResolvedValue(mockHolidays);
 
             const tools = (mcpServer as any)._registeredTools;
-            const tool = tools.get('holidays_list');
-            
+            const tool = tools['holidays_list'];
+
             const result = await tool.handler({}, {});
 
             expect(mocks.fetchHolidays).toHaveBeenCalledWith(undefined);
@@ -204,8 +204,8 @@ describe('MCP Tools', () => {
             mocks.fetchHolidays.mockResolvedValue([]);
 
             const tools = (mcpServer as any)._registeredTools;
-            const tool = tools.get('holidays_list');
-            
+            const tool = tools['holidays_list'];
+
             await tool.handler({ region: 'scotland' }, {});
 
             expect(mocks.fetchHolidays).toHaveBeenCalledWith('scotland');

@@ -7,7 +7,7 @@ describe('normalizeAcceptHeader', () => {
             headers: {}
         } as any;
         normalizeAcceptHeader(req);
-        expect(req.headers.accept).toBe('application/json, text/event-stream');
+        expect(req.headers.accept).toBe('application/json');
     });
 
     it('should default to application/json when Accept header is */*', () => {
@@ -17,7 +17,7 @@ describe('normalizeAcceptHeader', () => {
             }
         } as any;
         normalizeAcceptHeader(req);
-        expect(req.headers.accept).toBe('application/json, text/event-stream');
+        expect(req.headers.accept).toBe('application/json');
     });
 
     it('should preserve text/event-stream if it is explicitly requested', () => {

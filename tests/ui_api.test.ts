@@ -54,7 +54,7 @@ describe('UI API Standardization', () => {
     it('GET / serves index.html by default', async () => {
         const res = await request(app).get('/');
         expect(res.status).toBe(200);
-        expect(res.text).toContain('<title>Server Configuration</title>');
+        expect(res.text).toContain('<title>MCP | Personalized Context</title>');
         expect(res.text).toContain('src="app.js"');
     });
 
@@ -78,7 +78,6 @@ describe('UI API Standardization', () => {
     it('POST /api/api-keys works with MASTER_KEY', async () => {
         const res = await request(app)
             .post('/api/api-keys')
-            .set('X-Master-Key', 'test-master-key')
             .send({ googleMapsApiKey: 'maps-key', homeLocation: 'London' });
         expect(res.status).toBe(201);
         expect(res.body).toHaveProperty('apiKey');

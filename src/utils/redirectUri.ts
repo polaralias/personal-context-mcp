@@ -23,7 +23,12 @@ export const isRedirectUriAllowed = (redirectUri: string): boolean => {
         return false;
     }
 
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    if (url.protocol === 'http:') {
+        const hostname = url.hostname;
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+            return false;
+        }
+    } else if (url.protocol !== 'https:') {
         return false;
     }
 

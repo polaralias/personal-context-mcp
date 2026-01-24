@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Update OAuth URL display
     const oauthDisplay = document.getElementById('oauth-url-display');
     if (oauthDisplay) {
-        const fullUrl = window.location.origin + '/oauth';
+        const fullUrl = window.location.origin + '/authorize';
         oauthDisplay.innerText = fullUrl;
     }
 
@@ -69,33 +69,37 @@ function renderConfigForm(schema) {
 
     schema.fields.forEach(field => {
         const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-2';
 
         const label = document.createElement('label');
-        label.className = 'block text-sm font-medium text-gray-700 mb-1';
+        label.className = 'block text-sm font-bold text-slate-300 uppercase tracking-wider ml-1';
         label.innerText = field.label;
         wrapper.appendChild(label);
 
         let input;
+        const commonClasses = 'w-full h-12 bg-black/40 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-brand-500 transition-all placeholder:text-slate-600';
+
         if (field.type === 'select') {
             input = document.createElement('select');
-            input.className = 'w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500';
+            input.className = commonClasses;
             (field.options || []).forEach(opt => {
                 const option = document.createElement('option');
+                option.style.backgroundColor = '#1e1b4b'; // Matches indigo-950
                 option.value = opt.value;
                 option.innerText = opt.label;
                 input.appendChild(option);
             });
         } else if (field.type === 'checkbox') {
             const checkboxWrapper = document.createElement('div');
-            checkboxWrapper.className = 'flex items-center bg-gray-50 border border-gray-300 rounded-lg p-2';
+            checkboxWrapper.className = 'flex items-center bg-black/30 border border-white/10 rounded-xl p-4 group hover:bg-black/50 transition-colors';
 
             input = document.createElement('input');
             input.type = 'checkbox';
             input.id = field.name;
-            input.className = 'mr-2';
+            input.className = 'w-5 h-5 rounded border-white/20 bg-black/40 text-brand-500 focus:ring-brand-500 focus:ring-offset-black';
 
             const cbLabel = document.createElement('span');
-            cbLabel.className = 'text-sm text-gray-700';
+            cbLabel.className = 'ml-3 text-sm text-slate-300 font-medium';
             cbLabel.innerText = field.description || '';
 
             checkboxWrapper.appendChild(input);
@@ -108,13 +112,13 @@ function renderConfigForm(schema) {
             return;
         } else if (field.type === 'textarea') {
             input = document.createElement('textarea');
-            input.className = 'w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500';
+            input.className = commonClasses.replace('h-12', 'h-32') + ' py-3';
             input.rows = field.rows || 4;
             input.placeholder = field.placeholder || '';
         } else {
             input = document.createElement('input');
             input.type = field.type === 'password' ? 'password' : 'text';
-            input.className = 'w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500';
+            input.className = commonClasses;
             input.placeholder = field.placeholder || '';
         }
 
@@ -125,9 +129,9 @@ function renderConfigForm(schema) {
 
         wrapper.appendChild(input);
 
-        if (field.description) {
+        if (field.description && field.type !== 'checkbox') {
             const hint = document.createElement('p');
-            hint.className = 'text-xs text-gray-500 mt-1';
+            hint.className = 'text-[10px] text-slate-500 mt-1 ml-1 italic';
             hint.innerText = field.description;
             wrapper.appendChild(hint);
         }

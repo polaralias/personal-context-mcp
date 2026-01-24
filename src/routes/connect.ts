@@ -74,7 +74,9 @@ router.get('/', async (req: Request, res: Response) => {
             path: '/connect',
             ip: req.ip
         }, 'Redirect URI rejected: not registered for this client');
-        return res.status(400).send('Redirect URI not allowed');
+
+        const errorMessage = `The redirect URI of your client (${redirect_uri}) isn't on the allowlist. Please raise a GitHub issue at https://github.com/polaralias/personal-context-mcp to have it added.`;
+        return res.status(400).send(errorMessage);
     }
 
     if (code_challenge_method !== 'S256') {
@@ -136,7 +138,8 @@ router.post('/', async (req: Request, res: Response) => {
 
     const allowedUris = client.redirectUris as string[];
     if (!allowedUris.includes(redirect_uri)) {
-        return res.status(400).json({ error: 'Redirect URI not allowed' });
+        const errorMessage = `The redirect URI of your client (${redirect_uri}) isn't on the allowlist. Please raise a GitHub issue at https://github.com/polaralias/personal-context-mcp to have it added.`;
+        return res.status(400).json({ error: errorMessage });
     }
 
     if (code_challenge_method !== 'S256') {

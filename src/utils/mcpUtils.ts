@@ -6,7 +6,9 @@ import { Request } from 'express';
  */
 export function normalizeAcceptHeader(req: Request): void {
     const accept = req.headers.accept;
+    // Only default to application/json if missing or wildcard.
+    // Do NOT force text/event-stream unless the client explicitly supports it.
     if (!accept || accept === '*/*') {
-        req.headers.accept = 'application/json, text/event-stream';
+        req.headers.accept = 'application/json';
     }
 }
