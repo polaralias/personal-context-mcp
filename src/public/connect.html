@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP | Authorize Connection</title>
+    <title>Authorize | MCP Server</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@700;800;900&display=swap"
         rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -16,87 +16,165 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
                         outfit: ['Outfit', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f5f3ff',
-                            100: '#ede9fe',
-                            200: '#ddd6fe',
-                            300: '#c4b5fd',
-                            400: '#a78bfa',
-                            500: '#8b5cf6',
-                            600: '#7c3aed',
-                            700: '#6d28d9',
-                            800: '#5b21b6',
-                            900: '#4c1d95',
-                        }
                     }
                 }
             }
         }
     </script>
     <style>
+        :root {
+            --primary: #4285F4;
+            --dark: #0f172a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --transition: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         body {
-            background: radial-gradient(circle at top right, #0f172a, #000000);
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(66, 133, 244, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(52, 168, 83, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(251, 188, 5, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(234, 67, 53, 0.15) 0px, transparent 50%);
             min-height: 100vh;
+            color: #f8fafc;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.05;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            filter: blur(100px);
+            border-radius: 50%;
+            z-index: -2;
+            opacity: 0.4;
+            animation: move 30s infinite alternate;
+        }
+
+        .blob-1 {
+            background: rgba(66, 133, 244, 0.3);
+            top: -10%;
+            left: -10%;
+        }
+
+        .blob-2 {
+            background: rgba(234, 67, 53, 0.3);
+            bottom: -10%;
+            right: -10%;
+            animation-delay: -15s;
+        }
+
+        @keyframes move {
+            from {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            to {
+                transform: translate(100px, 100px) rotate(90deg) scale(1.2);
+            }
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
+            background: var(--glass);
+            backdrop-filter: blur(25px) saturate(160%);
+            -webkit-backdrop-filter: blur(25px) saturate(160%);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s var(--transition);
+        }
+
+        .mcp-gradient {
+            background: linear-gradient(to right, #4285F4, #34A853, #FBBC05, #EA4335, #4285F4);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        @keyframes shine {
+            to {
+                background-position: 200% center;
+            }
+        }
+
+        .input-field {
+            transition: all 0.2s var(--transition);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 1rem;
         }
 
-        .glow-button {
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .glow-button:hover {
-            box-shadow: 0 0 35px rgba(139, 92, 246, 0.5);
-            transform: translateY(-2px);
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(66, 133, 244, 0.5);
+            box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.15);
+            outline: none;
         }
 
         .hidden {
             display: none;
         }
 
-        input:focus {
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
         }
     </style>
 </head>
 
-<body class="text-slate-200 font-sans selection:bg-brand-500/30">
-    <div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
-        <div class="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] bg-brand-600/20 blur-[120px] rounded-full"></div>
-        <div class="absolute -bottom-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full"></div>
-    </div>
+<body class="flex items-center justify-center p-4 min-h-screen">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
 
-    <div class="min-h-screen flex items-center justify-center p-6 bg-transparent">
-        <div class="glass rounded-3xl max-w-lg w-full p-8 md:p-12 shadow-2xl relative overflow-hidden">
-            <!-- Header -->
-            <div class="flex items-center gap-4 mb-8">
-                <div
-                    class="w-12 h-12 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-600/20">
-                    <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 21a10.003 10.003 0 008.302-4.465l.054.09c1.744 2.772 2.753 6.054 2.753 9.571m-1.113-2.04a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="text-3xl font-bold font-outfit tracking-tight text-white">Authorize</h1>
-                    <p class="text-slate-400 mt-1">Connect your client to the MCP server</p>
-                </div>
-            </div>
+    <div class="max-w-xl w-full py-12">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-black text-white tracking-tight font-outfit">
+                Authorize <span class="mcp-gradient">Link</span>
+            </h1>
+            <p class="text-blue-200/60 mt-4 text-lg font-medium tracking-wide">
+                Connect your client to the MCP server
+            </p>
+        </header>
 
+        <main class="glass rounded-[2.5rem] p-10 shadow-2xl">
             <div id="error-msg"
-                class="hidden mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
+                class="hidden mb-8 p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
             </div>
 
-            <form id="connect-form" class="space-y-6">
+            <form id="connect-form" class="space-y-8">
                 <input type="hidden" id="client_id" name="client_id">
                 <input type="hidden" id="redirect_uri" name="redirect_uri">
                 <input type="hidden" id="state" name="state">
@@ -104,40 +182,44 @@
                 <input type="hidden" id="code_challenge_method" name="code_challenge_method">
                 <input type="hidden" id="csrf_token" name="csrf_token" value="{{CSRF_TOKEN}}">
 
-                <div class="space-y-2">
-                    <label class="block text-sm font-bold text-slate-300 uppercase tracking-wider ml-1">Connection
-                        Name</label>
-                    <input id="name" name="name" type="text" required
-                        class="w-full h-12 bg-black/40 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-brand-500 transition-all placeholder:text-slate-600"
+                <div class="space-y-3">
+                    <label class="block text-[10px] font-black text-blue-400/60 uppercase tracking-[0.25em] ml-2">
+                        Connection Name
+                    </label>
+                    <input id="name" name="name" type="text" required class="w-full p-4 input-field"
                         placeholder="e.g. My Workspace">
                 </div>
 
-                <div class="space-y-4 pt-4 border-t border-white/5">
+                <div class="space-y-6 pt-8 border-t border-white/5">
                     <div class="flex items-center justify-between">
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Configuration details</p>
-                        <span id="schema-status" class="text-[10px] text-brand-400 font-mono"></span>
+                        <p class="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Configuration Details
+                        </p>
+                        <span id="schema-status" class="text-[10px] text-blue-400 font-mono tracking-widest"></span>
                     </div>
-                    <div id="connection-fields-container" class="space-y-6">
+                    <div id="connection-fields-container" class="space-y-8">
                         <!-- Fields injected by JS -->
                     </div>
                 </div>
 
                 <button id="submit-btn" type="submit"
-                    class="w-full h-14 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-2xl glow-button flex items-center justify-center gap-2 text-lg mt-8">
-                    <span>Authorize & Link</span>
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-[1.25rem] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl text-xs uppercase tracking-[0.2em] mt-4">
+                    Authorize & Link Access
                 </button>
             </form>
 
-            <div class="mt-8 text-center">
-                <p class="text-xs text-slate-500">
+            <div class="mt-10 text-center">
+                <p class="text-[10px] font-medium text-white/30 leading-relaxed uppercase tracking-wider">
                     By linking, you authorize this client to access tools and resources provided by the MCP server.
                 </p>
             </div>
-        </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center">
+            <p class="text-[10px] font-black text-blue-100/20 uppercase tracking-[0.5em]">
+                &copy; 2026 Model Context Protocol
+            </p>
+        </footer>
     </div>
 
     <script src="connect.js"></script>

@@ -127,36 +127,40 @@ function renderFields(fields, container) {
         wrapper.className = 'space-y-2';
 
         const label = document.createElement('label');
-        label.className = 'block text-sm font-bold text-slate-300 uppercase tracking-wider ml-1';
+        label.className = 'block text-[10px] font-black text-blue-400/60 uppercase tracking-[0.25em] ml-2';
         label.innerText = field.label || field.name;
         wrapper.appendChild(label);
 
         let input;
-        const commonClasses = 'w-full h-12 bg-black/40 border border-white/10 rounded-xl px-4 text-white focus:outline-none focus:border-brand-500 transition-all placeholder:text-slate-600';
+        const commonClasses = 'w-full p-4 input-field';
 
         if (field.type === 'select') {
             input = document.createElement('select');
             input.className = commonClasses;
             (field.options || []).forEach(opt => {
                 const option = document.createElement('option');
-                option.style.backgroundColor = '#1e1b4b'; // Matches indigo-950
+                option.style.backgroundColor = '#0f172a';
                 option.value = opt.value;
                 option.innerText = opt.label;
                 input.appendChild(option);
             });
         } else if (field.type === 'checkbox') {
             const checkboxWrapper = document.createElement('div');
-            checkboxWrapper.className = 'flex items-center bg-black/30 border border-white/10 rounded-xl p-4 group hover:bg-black/50 transition-colors';
+            checkboxWrapper.className = 'flex items-center glass rounded-xl p-5 group hover:bg-white/5 transition-all cursor-pointer';
 
             input = document.createElement('input');
             input.type = 'checkbox';
             input.id = field.name;
             input.name = field.name;
-            input.className = 'w-5 h-5 rounded border-white/20 bg-black/40 text-brand-500 focus:ring-brand-500 focus:ring-offset-black';
+            input.className = 'w-6 h-6 rounded-lg border-white/10 bg-white/5 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 transition-all cursor-pointer';
 
             const cbLabel = document.createElement('span');
-            cbLabel.className = 'ml-3 text-sm text-slate-300 font-medium';
+            cbLabel.className = 'ml-4 text-sm text-white/70 font-bold tracking-wide uppercase';
             cbLabel.innerText = field.description || '';
+
+            checkboxWrapper.onclick = (e) => {
+                if (e.target !== input) input.checked = !input.checked;
+            };
 
             checkboxWrapper.appendChild(input);
             checkboxWrapper.appendChild(cbLabel);
@@ -167,7 +171,7 @@ function renderFields(fields, container) {
             return;
         } else if (field.type === 'textarea') {
             input = document.createElement('textarea');
-            input.className = commonClasses.replace('h-12', 'h-32') + ' py-3';
+            input.className = commonClasses + ' h-32 py-4';
             input.rows = field.rows || 4;
             input.placeholder = field.placeholder || '';
         } else {
@@ -186,7 +190,7 @@ function renderFields(fields, container) {
 
         if (field.description && field.type !== 'checkbox') {
             const hint = document.createElement('p');
-            hint.className = 'text-[10px] text-slate-500 mt-1 ml-1 italic';
+            hint.className = 'text-[10px] text-white/30 mt-2 ml-2 italic font-medium';
             hint.innerText = field.description;
             wrapper.appendChild(hint);
         }
