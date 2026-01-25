@@ -143,31 +143,32 @@ if (require.main === module) {
   const keyInfo = getMasterKeyInfo();
   if (keyInfo.status !== 'present') {
     logger.error('MASTER_KEY is missing. Refusing to start.');
-    process.exit(1);
-  }
-
-  if (keyInfo.isInsecureDefault) {
-    if (process.env.NODE_ENV === 'production') {
-      logger.error('MASTER_KEY is set to the insecure default. Refusing to start in production.');
-      process.exit(1);
+    setTimeout(() => process.exit(1), 100);
+  } else {
+    if (keyInfo.isInsecureDefault) {
+      if (process.env.NODE_ENV === 'production') {
+        logger.error('MASTER_KEY is set to the insecure default. Refusing to start in production.');
+        setTimeout(() => process.exit(1), 100);
+      } else {
+        logger.warn('SECURITY WARNING: Using insecure default MASTER_KEY (development only).');
+      }
     }
-    logger.warn('SECURITY WARNING: Using insecure default MASTER_KEY (development only).');
-  }
 
-  runMigrations()
-    .then(() => {
-      // In production, you might want to bind to '0.0.0.0', 
-      // but MCP spec recommends localhost for security unless explicitly configured.
-      const host = process.env.HOST || '127.0.0.1';
-      app.listen(Number(port), host, () => {
-        logger.info({ port, host }, 'server started');
-        startJobs();
-      });
-    })
-    .catch((error) => {
-      logger.error({ err: error }, 'Failed to run migrations');
-      process.exit(1);
-    });
+    if (keyInfo.status === 'present' && (!keyInfo.isInsecureDefault || process.env.NODE_ENV !== 'production')) {
+      runMigrations()
+        .then(() => {
+          const host = process.env.HOST || '0.0.0.0';
+          app.listen(Number(port), host, () => {
+            logger.info({ port, host }, 'server started');
+            startJobs();
+          });
+        })
+        .catch((error) => {
+          logger.error({ err: error }, 'Failed to run migrations');
+          setTimeout(() => process.exit(1), 100);
+        });
+    }
+  }
 }
 
 export default app;

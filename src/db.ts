@@ -63,12 +63,21 @@ const MIGRATION_STATEMENTS = [
     `CREATE INDEX IF NOT EXISTS "api_keys_key_hash_idx" ON "api_keys"("key_hash")`
 ];
 
-export const runMigrations = async () => {
-    await prisma.$transaction(async (tx) => {
-        for (const statement of MIGRATION_STATEMENTS) {
-            await tx.$executeRawUnsafe(statement);
+export const runMigrations = async (retries = 5, delayMs = 3000) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await prisma.$transaction(async (tx) => {
+                for (const statement of MIGRATION_STATEMENTS) {
+                    await tx.$executeRawUnsafe(statement);
+                }
+            });
+            return;
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            console.warn(`[DB] Migration attempt ${i + 1} failed (likely database still initializing), retrying in ${delayMs}ms...`);
+            await new Promise(res => setTimeout(res, delayMs));
         }
-    });
+    }
 };
 
 export default prisma;
