@@ -140,34 +140,43 @@ app.all('/key=:apiKey', authenticateMcp, handleMcpRequest);
 app.all('/key=:apiKey/mcp', authenticateMcp, handleMcpRequest);
 
 if (require.main === module) {
+  logger.info('Server boot sequence initiated...');
   const keyInfo = getMasterKeyInfo();
+
   if (keyInfo.status !== 'present') {
-    logger.error('MASTER_KEY is missing. Refusing to start.');
+    logger.error({ status: keyInfo.status }, 'MASTER_KEY is missing. Refusing to start.');
     setTimeout(() => process.exit(1), 100);
   } else {
+    logger.info({ derivation: keyInfo.derivation }, 'MASTER_KEY validated');
+
     if (keyInfo.isInsecureDefault) {
       if (process.env.NODE_ENV === 'production') {
         logger.error('MASTER_KEY is set to the insecure default. Refusing to start in production.');
         setTimeout(() => process.exit(1), 100);
+        return;
       } else {
         logger.warn('SECURITY WARNING: Using insecure default MASTER_KEY (development only).');
       }
     }
 
-    if (keyInfo.status === 'present' && (!keyInfo.isInsecureDefault || process.env.NODE_ENV !== 'production')) {
-      runMigrations()
-        .then(() => {
-          const host = process.env.HOST || '0.0.0.0';
-          app.listen(Number(port), host, () => {
-            logger.info({ port, host }, 'server started');
-            startJobs();
-          });
-        })
-        .catch((error) => {
-          logger.error({ err: error }, 'Failed to run migrations');
-          setTimeout(() => process.exit(1), 100);
+    logger.info('Connecting to database and running migrations...');
+    runMigrations()
+      .then(() => {
+        logger.info('Migrations completed successfully');
+        const host = process.env.HOST || '0.0.0.0';
+        const server = app.listen(Number(port), host, () => {
+          logger.info({ port, host, node_env: process.env.NODE_ENV }, 'SERVER STARTED AND LISTENING');
+          startJobs();
         });
-    }
+
+        server.on('error', (err) => {
+          logger.error({ err }, 'Server failed to start listening');
+        });
+      })
+      .catch((error) => {
+        logger.error({ err: error.message, stack: error.stack }, 'FAILED TO RUN MIGRATIONS - SERVER HALTED');
+        setTimeout(() => process.exit(1), 100);
+      });
   }
 }
 
