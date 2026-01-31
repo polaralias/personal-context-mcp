@@ -28,14 +28,7 @@ vi.mock('../src/services/auth', () => {
     };
 });
 
-// 5. Mock PrismaClient
-vi.mock('@prisma/client', () => {
-    return {
-        PrismaClient: class {
-            $queryRaw = vi.fn().mockResolvedValue([1]);
-        },
-    };
-});
+
 
 import app from '../src/index';
 

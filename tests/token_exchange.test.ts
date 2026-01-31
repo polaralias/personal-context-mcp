@@ -10,11 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../src/services/auth', () => mocks);
 
-vi.mock('@prisma/client', () => ({
-    PrismaClient: class {
-        $queryRaw = vi.fn().mockResolvedValue([1]);
-    },
-}));
+
 
 import app from '../src/index';
 
@@ -27,7 +23,7 @@ describe('POST /token', () => {
         const res = await request(app)
             .post('/token')
             .send({ grant_type: 'client_credentials' });
-        
+
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('unsupported_grant_type');
     });
@@ -36,7 +32,7 @@ describe('POST /token', () => {
         const res = await request(app)
             .post('/token')
             .send({ grant_type: 'authorization_code' });
-        
+
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('invalid_request');
     });
@@ -48,12 +44,12 @@ describe('POST /token', () => {
             .post('/token')
             .send({
                 grant_type: 'authorization_code',
-                code:  'invalid-code',
-                redirect_uri:  'http://localhost:3010/callback',
+                code: 'invalid-code',
+                redirect_uri: 'http://localhost:3010/callback',
                 code_verifier: 'test-verifier',
                 client_id: 'test-client'
             });
-        
+
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('invalid_grant');
     });
@@ -75,16 +71,16 @@ describe('POST /token', () => {
                 code: 'valid-code',
                 redirect_uri: 'http://localhost:3010/callback',
                 code_verifier: 'test-verifier',
-                client_id:  'test-client'
+                client_id: 'test-client'
             });
-        
+
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('invalid_client');
     });
 
     it('should return 400 for redirect_uri mismatch', async () => {
         mocks.findAndValidateAuthCode.mockResolvedValue({
-            code:  'hashed-code',
+            code: 'hashed-code',
             clientId: 'test-client',
             redirectUri: 'http://different-uri.com/callback',
             codeChallenge: 'challenge',
@@ -95,13 +91,13 @@ describe('POST /token', () => {
         const res = await request(app)
             .post('/token')
             .send({
-                grant_type:  'authorization_code',
+                grant_type: 'authorization_code',
                 code: 'valid-code',
                 redirect_uri: 'http://localhost:3010/callback',
-                code_verifier:  'test-verifier',
+                code_verifier: 'test-verifier',
                 client_id: 'test-client'
             });
-        
+
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('invalid_grant');
     });
@@ -113,7 +109,7 @@ describe('POST /token', () => {
             redirectUri: 'http://localhost:3010/callback',
             codeChallenge: 'challenge',
             codeChallengeMethod: 'S256',
-            connectionId:  'conn-123'
+            connectionId: 'conn-123'
         });
         mocks.verifyPkce.mockReturnValue(false);
 
@@ -126,7 +122,7 @@ describe('POST /token', () => {
                 code_verifier: 'wrong-verifier',
                 client_id: 'test-client'
             });
-        
+
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('invalid_grant');
         expect(res.body.error_description).toBe('PKCE verification failed');
@@ -157,7 +153,7 @@ describe('POST /token', () => {
                 code_verifier: 'correct-verifier',
                 client_id: 'test-client'
             });
-        
+
         expect(res.status).toBe(200);
         expect(res.body.access_token).toBe('session-id:secret-token');
         expect(res.body.token_type).toBe('Bearer');
@@ -179,7 +175,7 @@ describe('POST /token', () => {
 
         const responses = await Promise.all(requests);
         const rateLimited = responses.filter(r => r.status === 429);
-        
+
         expect(rateLimited.length).toBeGreaterThan(0);
     });
 });

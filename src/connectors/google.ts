@@ -35,15 +35,9 @@ export class GoogleConnector {
       // Mock fetch
       // const location = await fetchGoogleLocation(this.config.apiKey);
 
-      // If we had data:
-      // await prisma.locationEvent.create({
-      //   data: {
-      //     source: 'google',
-      //     latitude: location.lat,
-      //     longitude: location.lng,
-      //     timestamp: new Date()
-      //   }
-      // });
+      // Example of saving location
+      // const tracker = (await import('../services/tracker')).TrackerService.getInstance();
+      // await tracker.setLocation(51.5074, -0.1278, 'Mock Location', 'google');
 
     } catch (error) {
       logger.error({ err: error }, 'error polling Google Location');

@@ -7,7 +7,7 @@ services:
     ports:
       - "3010:3000"
     environment:
-      DATABASE_URL: postgresql://${PERSONAL_POSTGRES_USER:-user}:${PERSONAL_POSTGRES_PASSWORD:-password}@db:5432/${PERSONAL_POSTGRES_DB:-mcp}
+      DATABASE_URL: sqlite:///data/mcp.db
       GOOGLE_API_KEY: ${PERSONAL_GOOGLE_API_KEY:-dummy}
       GOOGLE_POLL_CRON: ${PERSONAL_GOOGLE_POLL_CRON:-0 0 * * *}
       # MASTER_KEY: 64 hex characters (32 bytes) or a strong passphrase.
@@ -26,17 +26,8 @@ services:
       # Optional TTL overrides
       CODE_TTL_SECONDS: ${PERSONAL_CODE_TTL_SECONDS:-90}
       TOKEN_TTL_SECONDS: ${PERSONAL_TOKEN_TTL_SECONDS:-3600}
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: ${PERSONAL_POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${PERSONAL_POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${PERSONAL_POSTGRES_DB:-mcp}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mcp_data:/data
 
 volumes:
-  postgres_data:
+  mcp_data:

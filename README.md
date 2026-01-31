@@ -16,7 +16,7 @@ The server is configured via environment variables.
 
 ### Required
 
-*   `DATABASE_URL`: PostgreSQL connection string.
+*   `DATABASE_URL`: SQLite connection string (e.g., `sqlite:///data/mcp.db` or `sqlite:mcp.db`).
 *   `MASTER_KEY`: Standardized 32-byte key handling. **MUST BE CHANGED FOR PRODUCTION.**
     *   **Format 1 (Hex):** 64 hex characters (0-9, a-f). Decoded directly to 32 bytes.
         *   Generate (OpenSSL): `openssl rand -hex 32`
@@ -120,8 +120,7 @@ A comprehensive smoke test for DCR and OAuth is available at `scripts/dcr-smoke-
 # Install dependencies
 npm install
 
-# Run database migrations
-npx prisma migrate dev
+
 
 # Start development server
 npm run dev
@@ -199,7 +198,7 @@ For clients that do not support OAuth, this server supports a self-serve API key
 
 1.  Set `API_KEY_MODE=user_bound` in your environment (e.g., in `docker-compose.yml`).
 2.  Ensure `MASTER_KEY` is set securely.
-3.  Run migrations: `npx prisma migrate dev`.
+
 
 ### Usage (Client)
 

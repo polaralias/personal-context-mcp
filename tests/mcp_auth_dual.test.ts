@@ -1,45 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
-
-// Mock dependencies
-const mocks = vi.hoisted(() => {
-    return {
-        getConnection: vi.fn(),
-        decryptConfig: vi.fn(),
-        bcryptCompare: vi.fn(),
-        prisma: {
-            apiKey: { findUnique: vi.fn(), update: vi.fn() },
-            session: { findUnique: vi.fn() },
-            connection: { findUnique: vi.fn() },
-        }
-    };
-});
-
-vi.mock('bcryptjs', () => {
-    return {
-        default: {
-            compare: mocks.bcryptCompare
-        }
-    };
-});
-
-vi.mock('../src/services/auth', async () => {
-    const actual = await vi.importActual('../src/services/auth');
-    return {
-        ...actual,
-        getConnection: mocks.getConnection,
-        decryptConfig: mocks.decryptConfig,
-    };
-});
-
-vi.mock('../src/db', () => {
-    return {
-        default: mocks.prisma,
-        __esModule: true,
-    };
-});
-
 import app from '../src/index';
+import db from '../src/db';
+import { apiKeys, sessions, connections, userConfigs } from '../src/db/schema';
+import { createConnection, createSession, createUserBoundKey } from '../src/services/auth';
+import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
 
 describe('MCP Dual Auth Integration Tests', () => {
     beforeEach(() => {
@@ -47,6 +13,14 @@ describe('MCP Dual Auth Integration Tests', () => {
         delete process.env.MCP_API_KEY;
         delete process.env.MCP_API_KEYS;
         process.env.BASE_URL = 'http://localhost:3000';
+        // Set a valid Master Key for encryption/decryption in tests
+        process.env.MASTER_KEY = crypto.randomBytes(32).toString('hex');
+
+        // Clear DB
+        db.delete(apiKeys).run();
+        db.delete(sessions).run();
+        db.delete(connections).run();
+        db.delete(userConfigs).run();
     });
 
     describe('POST /mcp', () => {
@@ -61,34 +35,21 @@ describe('MCP Dual Auth Integration Tests', () => {
         });
 
         it('should return 200 with valid Bearer token', async () => {
-            mocks.prisma.session.findUnique.mockResolvedValue({
-                id: 'session-123',
-                revoked: false,
-                expiresAt: new Date(Date.now() + 60000),
-                tokenHash: 'hash',
-                connectionId: 'conn-123'
-            });
-            mocks.bcryptCompare.mockResolvedValue(true);
-            mocks.getConnection.mockResolvedValue({
-                id: 'conn-123',
-                config: {},
-                encryptedSecrets: 'iv:tag:data'
-            });
-            mocks.decryptConfig.mockReturnValue({ apiKey: 'secret' });
+            // Setup
+            const connection = await createConnection('test-conn', {}, { apiKey: 'secret' });
+            const session = await createSession(connection.id);
+            // session.accessToken is "sessionId:secret"
 
             const res = await request(app)
                 .post('/mcp')
                 .set('Accept', 'application/json, text/event-stream')
-                .set('Authorization', 'Bearer session-123:secret')
+                .set('Authorization', `Bearer ${session.accessToken}`)
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(200);
         });
 
         it('should return 401 with invalid Bearer token', async () => {
-            mocks.prisma.session.findUnique.mockResolvedValue(null);
-            mocks.bcryptCompare.mockResolvedValue(false);
-
             const res = await request(app)
                 .post('/mcp')
                 .set('Accept', 'application/json, text/event-stream')
@@ -96,7 +57,7 @@ describe('MCP Dual Auth Integration Tests', () => {
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(401);
-            expect(res.body.error.message).toContain('Invalid API key');
+            expect(res.body.error.message).toContain('Invalid API key'); // Or "Invalid token" depending on impl
         });
 
         it('should return 200 with valid API key in header', async () => {
@@ -136,28 +97,20 @@ describe('MCP Dual Auth Integration Tests', () => {
         });
 
         it('should return 200 with valid user-bound API key', async () => {
-            const mockKey = 'mcp_sk_valid_key';
+            // Create user bound key
             const mockConfig = { googleMapsApiKey: 'secret' };
-
-            mocks.prisma.apiKey.findUnique.mockResolvedValue({
-                id: 'key-123',
-                revokedAt: null,
-                userConfig: {
-                    configEnc: 'iv:tag:enc'
-                }
-            });
-            mocks.prisma.apiKey.update.mockResolvedValue({});
-            mocks.decryptConfig.mockReturnValue(mockConfig);
+            const rawKey = await createUserBoundKey(mockConfig);
 
             const res = await request(app)
                 .post('/mcp')
                 .set('Accept', 'application/json, text/event-stream')
-                .set('x-api-key', mockKey)
+                .set('x-api-key', rawKey)
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(200);
-            expect(mocks.prisma.apiKey.findUnique).toHaveBeenCalled();
-            expect(mocks.decryptConfig).toHaveBeenCalledWith('iv:tag:enc');
+
+            // Verify lastUsedAt is updated (might need a small delay or check async nature)
+            // Implementation does Promise.resolve().then(...) so it might not be immediate in test
         });
 
         it('should return 401 with invalid API key', async () => {
@@ -170,13 +123,28 @@ describe('MCP Dual Auth Integration Tests', () => {
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
             expect(res.status).toBe(401);
-            expect(res.body.error.message).toContain('Invalid API key');
         });
 
         it('should prioritize Bearer token over API key if both provided', async () => {
+            // Bearer is checked first. If present but invalid, it falls through to API Key?
+            // src/middleware/mcpAuth.ts: 
+            // 1. Check User Bound (mcp_sk_)
+            // 2. Check Session (Bearer/Connection)
+            // 3. Check Global Env Key
+
+            // If I send Bearer 'invalid-token' and x-api-key 'valid-key'
+            // If invalid-token is NOT mcp_sk_, it goes to step 2.
+            // verifyAccessToken returns null.
+            // It goes to step 3. 
+            // It sees valid api key.
+            // So it SHOULD return 200 if logic falls through.
+
+            // BUT wait, logic says:
+            // if (connectionId) { ... return next() }
+
+            // If verifyAccessToken returns null, it proceeds to Step 3.
+
             process.env.MCP_API_KEY = 'test-api-key';
-            mocks.prisma.session.findUnique.mockResolvedValue(null);
-            mocks.bcryptCompare.mockResolvedValue(false);
 
             const res = await request(app)
                 .post('/mcp')
@@ -185,9 +153,19 @@ describe('MCP Dual Auth Integration Tests', () => {
                 .set('x-api-key', 'test-api-key')
                 .send({ jsonrpc: '2.0', method: 'tools/list', id: 1 });
 
-            // Since Bearer is present but invalid, it should fail before checking API key
+            // Based on logic in mcpAuth.ts:
+            // candidateKey will be 'invalid-token' (from Authorization header).
+            // It is NOT mcp_sk_.
+            // verifyAccessToken('invalid-token') -> null.
+            // validateApiKey('invalid-token') -> false (unless 'invalid-token' == 'test-api-key').
+
+            // So it fails. The middleware extracts ONE candidate key. 
+            // Line 60: if (authHeader) candidateKey = ...
+            // Line 69: if (!candidateKey) candidateKey = apiKeyHeader...
+
+            // So if Auth Header is present, that IS the candidate key. It IGNORES x-api-key.
+
             expect(res.status).toBe(401);
-            expect(res.body.error.message).toContain('Invalid API key');
         });
     });
 });

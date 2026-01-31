@@ -41,11 +41,7 @@ vi.mock('../src/services/holiday', () => ({
     }
 }));
 
-vi.mock('../src/db', () => ({
-    default: {
-        $queryRaw: vi.fn().mockResolvedValue([1])
-    }
-}));
+
 
 // Import after mocks
 import { mcpServer } from '../src/server/mcp';

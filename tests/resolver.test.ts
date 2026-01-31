@@ -1,41 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { StatusResolver } from '../src/services/resolver';
+import db from '../src/db';
+import { workStatusEvents, locationEvents, scheduledStatus } from '../src/db/schema';
+import { HolidayService } from '../src/services/holiday';
 
-// Mocks
-const mocks = vi.hoisted(() => {
-    return {
-        prisma: {
-            workStatusEvent: {
-                findMany: vi.fn(),
-                findFirst: vi.fn(),
-            },
-            locationEvent: {
-                findFirst: vi.fn(),
-            },
-            scheduledStatus: {
-                findUnique: vi.fn(),
-            },
-            bankHolidayCache: {
-                findUnique: vi.fn(),
-                upsert: vi.fn(),
-            }
-        },
-        holidayService: {
-            isBankHoliday: vi.fn(),
-            fetchHolidays: vi.fn(),
-            getInstance: vi.fn(),
-        }
-    };
-});
-
-// Mock dependencies
-vi.mock('../src/db', () => ({ default: mocks.prisma }));
+// Mock HolidayService to avoid network calls
+// We can mock the instance method 'isBankHoliday'
+const mockIsBankHoliday = vi.fn();
 vi.mock('../src/services/holiday', () => ({
     HolidayService: {
-        getInstance: () => mocks.holidayService
+        getInstance: () => ({
+            isBankHoliday: mockIsBankHoliday,
+            fetchHolidays: vi.fn(),
+        })
     }
 }));
-
-import { StatusResolver } from '../src/services/resolver';
 
 describe('StatusResolver', () => {
     let resolver: StatusResolver;
@@ -43,67 +22,79 @@ describe('StatusResolver', () => {
     beforeEach(() => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2023-10-02T12:00:00Z')); // Monday
-        vi.clearAllMocks();
+
+        // Clear DB
+        db.delete(workStatusEvents).run();
+        db.delete(locationEvents).run();
+        db.delete(scheduledStatus).run();
+
         resolver = StatusResolver.getInstance();
-        mocks.holidayService.isBankHoliday.mockResolvedValue(false);
+        mockIsBankHoliday.mockResolvedValue(false);
     });
 
     afterEach(() => {
         vi.useRealTimers();
+        vi.clearAllMocks();
     });
 
     it('should default to "off" if no events', async () => {
-        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(null);
-        mocks.prisma.locationEvent.findFirst.mockResolvedValue(null);
-        mocks.prisma.scheduledStatus.findUnique.mockResolvedValue(null);
-
         const status = await resolver.resolveStatus();
         expect(status.workStatus).toBe('off');
     });
 
     it('should use latest valid permanent event', async () => {
-        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
-            { status: 'working', createdAt: new Date(), expiresAt: null }
-        );
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'working',
+            reason: '',
+            createdAt: new Date()
+        }).run();
 
         const status = await resolver.resolveStatus();
         expect(status.workStatus).toBe('working');
     });
 
     it('should use latest valid unexpired temporary event', async () => {
-        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
-            { status: 'travel', createdAt: new Date(), expiresAt: new Date(Date.now() + 10000) }
-        );
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'travel',
+            reason: '',
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 10000)
+        }).run();
 
         const status = await resolver.resolveStatus();
         expect(status.workStatus).toBe('travel');
     });
 
-    // This test now relies on the implementation correctly calling prisma.findFirst with OR condition
     it('should ignore expired temporary events and fallback to previous valid event', async () => {
-        // The implementation asks Prisma for the latest VALID event.
-        // So we just mock the return of that specific query to be the "previous valid" one.
-        // To verify the "pagination cliff" logic, we rely on the fact that we are mocking findFirst
-        // and expecting it to be called, rather than findMany.
+        // Previous event (working)
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'working',
+            createdAt: new Date(Date.now() - 20000)
+        }).run();
 
-        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
-            { status: 'working', createdAt: new Date(Date.now() - 20000), expiresAt: null }
-        );
+        // Expired event (travel)
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'travel',
+            createdAt: new Date(Date.now() - 10000),
+            expiresAt: new Date(Date.now() - 5000)
+        }).run();
 
         const status = await resolver.resolveStatus();
         expect(status.workStatus).toBe('working');
-
-        // Ensure findFirst was called (and not findMany which was the bug)
-        expect(mocks.prisma.workStatusEvent.findFirst).toHaveBeenCalled();
     });
 
     it('should default to "off" on weekends', async () => {
-        // Mock a Sunday
         const date = new Date('2023-10-01T12:00:00Z'); // Sunday
 
-        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
-            { status: 'working', createdAt: new Date(), expiresAt: null }
-        );
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'working',
+            createdAt: new Date()
+        }).run();
 
         const status = await resolver.resolveStatus(date);
         expect(status.weekend).toBe(true);
@@ -114,14 +105,18 @@ describe('StatusResolver', () => {
         const date = new Date('2023-10-01T12:00:00Z'); // Sunday
         const dateString = '2023-10-01';
 
-        mocks.prisma.workStatusEvent.findFirst.mockResolvedValue(
-            { status: 'working', createdAt: new Date(), expiresAt: null }
-        );
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'working',
+            createdAt: new Date()
+        }).run();
 
-        mocks.prisma.scheduledStatus.findUnique.mockResolvedValue({
+        db.insert(scheduledStatus).values({
             date: dateString,
-            patch: { workStatus: 'working' }
-        });
+            patch: { workStatus: 'working' },
+            createdAt: new Date(),
+            updatedAt: new Date()
+        }).run();
 
         const status = await resolver.resolveStatus(date);
         expect(status.weekend).toBe(true);
@@ -131,26 +126,21 @@ describe('StatusResolver', () => {
     it('should apply active TTL override for NOW even if scheduled is different', async () => {
         const date = new Date(); // NOW
 
-        // Base is off - mocked by the "Valid Base" query
-        mocks.prisma.workStatusEvent.findFirst.mockImplementation((args) => {
-            // Differentiate the two calls to findFirst
-            // 1. findLatestValidWorkEvent calls findFirst with a 'where' clause
-            if (args && args.where) {
-                return Promise.resolve({ status: 'off', createdAt: new Date(), expiresAt: null });
-            }
-            // 2. The "TTL override" check calls findFirst without 'where' (just orderBy)
-            return Promise.resolve({
-                status: 'travel',
-                createdAt: new Date(),
-                expiresAt: new Date(Date.now() + 3600000)
-            });
-        });
-
         // Scheduled is working
-        mocks.prisma.scheduledStatus.findUnique.mockResolvedValue({
+        db.insert(scheduledStatus).values({
             date: date.toISOString().split('T')[0],
-            patch: { workStatus: 'working' }
-        });
+            patch: { workStatus: 'working' },
+            createdAt: new Date(),
+            updatedAt: new Date()
+        }).run();
+
+        // TTL Override (travel) - Created just now
+        db.insert(workStatusEvents).values({
+            source: 'manual',
+            status: 'travel',
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 3600000)
+        }).run();
 
         const status = await resolver.resolveStatus(date);
         expect(status.workStatus).toBe('travel');

@@ -1,111 +1,71 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
-import { hashString } from '../src/services/auth';
-
-// Mock dependencies
-const { mocks, prismaMock } = vi.hoisted(() => {
-    return {
-        mocks: {
-            validateApiKey: vi.fn(),
-            decryptConfig: vi.fn(),
-            hashString: vi.fn(),
-        },
-        prismaMock: {
-            apiKey: {
-                findUnique: vi.fn(),
-                update: vi.fn().mockReturnValue({ catch: vi.fn() }),
-            },
-        }
-    };
-});
-
-vi.mock('../src/services/auth', () => {
-    return {
-        validateApiKey: mocks.validateApiKey,
-        decryptConfig: mocks.decryptConfig,
-        hashString: (s: string) => s + '_hashed', // Mock hash implementation
-        getConnection: vi.fn(),
-    };
-});
-
-vi.mock('../src/db', () => ({
-    default: prismaMock,
-}));
-
 import app from '../src/index';
+import db from '../src/db';
+import { apiKeys, sessions, connections, userConfigs } from '../src/db/schema';
+import { createUserBoundKey } from '../src/services/auth';
+import crypto from 'crypto';
 
 describe('Path-based API Key Authentication', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        delete process.env.MCP_API_KEY;
+        delete process.env.MCP_API_KEYS;
         process.env.API_KEY_MODE = 'user_bound';
-        process.env.MASTER_KEY = 'test_master_key';
+        process.env.MASTER_KEY = crypto.randomBytes(32).toString('hex');
+        process.env.BASE_URL = 'http://localhost:3000';
+
+        // Clear DB
+        db.delete(apiKeys).run();
+        db.delete(sessions).run();
+        db.delete(connections).run();
+        db.delete(userConfigs).run();
     });
 
     it('should authenticate via /key=:apiKey', async () => {
-        const testKey = 'mcp_sk_test_key';
-        const hashedKey = testKey + '_hashed';
-
-        prismaMock.apiKey.findUnique.mockResolvedValue({
-            id: 'key-123',
-            revokedAt: null,
-            userConfig: {
-                configEnc: 'encrypted_config'
-            }
-        });
-
-        mocks.decryptConfig.mockReturnValue({ test: 'config' });
+        const mockConfig = { test: 'config' };
+        const rawKey = await createUserBoundKey(mockConfig);
 
         const res = await request(app)
-            .post(`/key=${testKey}`)
+            .post(`/key=${rawKey}`)
             .send({
-                method: "notifications/initialized",
-                params: {}
+                jsonrpc: "2.0",
+                method: "notifications/initialized", // Sending a notification (no ID) or a request
+                params: {},
+                id: 1
             });
 
-        expect(prismaMock.apiKey.findUnique).toHaveBeenCalledWith({
-            where: { keyHash: hashedKey },
-            include: { userConfig: true }
-        });
+        // If authentication passes, it should hit the MCP handler. 
+        // If method is not found, it might return error, but status should be 200 (JSON-RPC) or similar, NOT 401.
         expect(res.status).not.toBe(401);
     });
 
     it('should authenticate via /key=:apiKey/mcp', async () => {
-        const testKey = 'mcp_sk_test_key_2';
-        const hashedKey = testKey + '_hashed';
-
-        prismaMock.apiKey.findUnique.mockResolvedValue({
-            id: 'key-456',
-            revokedAt: null,
-            userConfig: {
-                configEnc: 'encrypted_config_2'
-            }
-        });
-
-        mocks.decryptConfig.mockReturnValue({ test: 'config_2' });
+        const mockConfig = { test: 'config_2' };
+        const rawKey = await createUserBoundKey(mockConfig);
 
         const res = await request(app)
-            .post(`/key=${testKey}/mcp`)
+            .post(`/key=${rawKey}/mcp`)
             .send({
+                jsonrpc: "2.0",
                 method: "notifications/initialized",
-                params: {}
+                params: {},
+                id: 1
             });
 
-        expect(prismaMock.apiKey.findUnique).toHaveBeenCalledWith({
-            where: { keyHash: hashedKey },
-            include: { userConfig: true }
-        });
         expect(res.status).not.toBe(401);
     });
 
     it('should fail with invalid key in path', async () => {
         const testKey = 'mcp_sk_invalid';
-        prismaMock.apiKey.findUnique.mockResolvedValue(null);
 
         const res = await request(app)
             .post(`/key=${testKey}`)
             .send({
+                jsonrpc: "2.0",
                 method: "notifications/initialized",
-                params: {}
+                params: {},
+                id: 1
             });
 
         expect(res.status).toBe(401);
