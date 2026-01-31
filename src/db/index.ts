@@ -44,8 +44,6 @@ const resolveDatabasePath = (databaseUrl: string) => {
 const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
 const databaseUrl = process.env.DATABASE_URL || (isTestEnv ? 'sqlite::memory:' : DEFAULT_DB_URL);
 const resolved = resolveDatabasePath(databaseUrl);
-const dbFileExists = !resolved.isMemory && fs.existsSync(resolved.path);
-
 if (!resolved.isMemory) {
   fs.mkdirSync(path.dirname(resolved.path), { recursive: true });
 }
@@ -162,10 +160,9 @@ let initialized = false;
 export const initDatabase = () => {
   if (initialized) return;
 
-  if (resolved.isMemory || !dbFileExists) {
-    for (const statement of SCHEMA_STATEMENTS) {
-      db.run(statement);
-    }
+  // Always ensure schema is present; CREATE IF NOT EXISTS keeps this idempotent.
+  for (const statement of SCHEMA_STATEMENTS) {
+    db.run(statement);
   }
 
   initialized = true;
