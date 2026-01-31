@@ -1,13 +1,22 @@
-import { PrismaClient } from '@prisma/client';
-import prisma from '../db';
-import { toInputJsonObject } from '../utils/prismaJson';
+import db from '../db';
+import { locationEvents, scheduledStatus, workStatusEvents } from '../db/schema';
+import { and, desc, eq, gte, lte } from 'drizzle-orm';
+
+const toJsonValue = <T>(value: T): T => {
+  const jsonString = JSON.stringify(value, (_key, innerValue) => {
+    if (typeof innerValue === 'bigint') {
+      return innerValue.toString();
+    }
+    return innerValue;
+  });
+
+  return JSON.parse(jsonString) as T;
+};
 
 export class TrackerService {
   private static instance: TrackerService;
-  private prisma: PrismaClient;
 
   private constructor() {
-    this.prisma = prisma;
   }
 
   public static getInstance(): TrackerService {
@@ -23,14 +32,23 @@ export class TrackerService {
       expiresAt = new Date(Date.now() + ttlSeconds * 1000);
     }
 
-    return this.prisma.workStatusEvent.create({
-      data: {
-        source: 'manual',
-        status,
-        reason,
-        expiresAt
-      }
-    });
+    const now = new Date();
+
+    db.insert(workStatusEvents).values({
+      source: 'manual',
+      status,
+      reason: reason ?? null,
+      expiresAt,
+      createdAt: now
+    }).run();
+
+    return {
+      source: 'manual',
+      status,
+      reason: reason ?? null,
+      expiresAt,
+      createdAt: now
+    };
   }
 
   async setLocation(latitude: number, longitude: number, locationName?: string, source: string = 'manual', ttlSeconds?: number) {
@@ -39,33 +57,46 @@ export class TrackerService {
       expiresAt = new Date(Date.now() + ttlSeconds * 1000);
     }
 
-    return this.prisma.locationEvent.create({
-      data: {
-        source,
-        latitude,
-        longitude,
-        name: locationName,
-        expiresAt
-      }
-    });
+    const now = new Date();
+
+    db.insert(locationEvents).values({
+      source,
+      latitude,
+      longitude,
+      name: locationName ?? null,
+      expiresAt,
+      createdAt: now
+    }).run();
+
+    return {
+      source,
+      latitude,
+      longitude,
+      name: locationName ?? null,
+      expiresAt,
+      createdAt: now
+    };
   }
 
   async getLocationHistory(from?: Date, to?: Date, limit: number = 50) {
-    const range: { gte?: Date; lte?: Date } = {};
+    const filters = [];
 
     if (from) {
-      range.gte = from;
+      filters.push(gte(locationEvents.createdAt, from));
     }
 
     if (to) {
-      range.lte = to;
+      filters.push(lte(locationEvents.createdAt, to));
     }
 
-    return this.prisma.locationEvent.findMany({
-      where: Object.keys(range).length ? { createdAt: range } : undefined,
-      orderBy: { createdAt: 'desc' },
-      take: limit
-    });
+    const whereClause = filters.length ? and(...filters) : undefined;
+
+    let query = db.select().from(locationEvents);
+    if (whereClause) {
+      query = query.where(whereClause);
+    }
+
+    return query.orderBy(desc(locationEvents.createdAt)).limit(limit).all();
   }
 
   async upsertSchedule(date: string, workStatus?: string, location?: any, reason?: string) {
@@ -80,30 +111,39 @@ export class TrackerService {
       patchData.reason = reason;
     }
 
-    const patch = toInputJsonObject(patchData);
+    const patch = toJsonValue(patchData);
+    const now = new Date();
 
-    return this.prisma.scheduledStatus.upsert({
-      where: { date },
-      update: { patch },
-      create: { date, patch }
-    });
+    db.insert(scheduledStatus)
+      .values({ date, patch, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({
+        target: scheduledStatus.date,
+        set: { patch, updatedAt: now }
+      })
+      .run();
+
+    return db.select().from(scheduledStatus).where(eq(scheduledStatus.date, date)).get();
   }
 
   async listSchedules(from?: string, to?: string) {
-    return this.prisma.scheduledStatus.findMany({
-      where: {
-        date: {
-          gte: from,
-          lte: to
-        }
-      },
-      orderBy: { date: 'asc' }
-    });
+    const filters = [];
+    if (from) {
+      filters.push(gte(scheduledStatus.date, from));
+    }
+    if (to) {
+      filters.push(lte(scheduledStatus.date, to));
+    }
+
+    const whereClause = filters.length ? and(...filters) : undefined;
+    let query = db.select().from(scheduledStatus);
+    if (whereClause) {
+      query = query.where(whereClause);
+    }
+
+    return query.orderBy(scheduledStatus.date).all();
   }
 
   async deleteSchedule(date: string) {
-    return this.prisma.scheduledStatus.delete({
-      where: { date }
-    });
+    return db.delete(scheduledStatus).where(eq(scheduledStatus.date, date)).run();
   }
 }

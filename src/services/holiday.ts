@@ -1,5 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import prisma from '../db';
+import db from '../db';
+import { bankHolidayCache } from '../db/schema';
+import { and, eq } from 'drizzle-orm';
 
 const GOV_UK_HOLIDAYS_URL = 'https://www.gov.uk/bank-holidays.json';
 
@@ -21,10 +22,8 @@ interface HolidayResponse {
 
 export class HolidayService {
   private static instance: HolidayService;
-  private prisma: PrismaClient;
 
   private constructor() {
-    this.prisma = prisma;
   }
 
   public static getInstance(): HolidayService {
@@ -38,14 +37,13 @@ export class HolidayService {
     const currentYear = new Date().getFullYear();
 
     // Check cache first
-    const cached = await this.prisma.bankHolidayCache.findUnique({
-      where: {
-        region_year: {
-          region,
-          year: currentYear
-        }
-      }
-    });
+    const cached = db.select()
+      .from(bankHolidayCache)
+      .where(and(
+        eq(bankHolidayCache.region, region),
+        eq(bankHolidayCache.year, currentYear)
+      ))
+      .get();
 
     // Refresh if cache is older than 24 hours or doesn't exist
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -69,23 +67,19 @@ export class HolidayService {
       const events = data[region].events;
 
       // Update cache
-      await this.prisma.bankHolidayCache.upsert({
-        where: {
-          region_year: {
-            region,
-            year: currentYear
-          }
-        },
-        update: {
-          payload: events as any,
-          fetchedAt: new Date()
-        },
-        create: {
+      const now = new Date();
+      db.insert(bankHolidayCache)
+        .values({
           region,
           year: currentYear,
-          payload: events as any
-        }
-      });
+          payload: events as unknown[],
+          fetchedAt: now
+        })
+        .onConflictDoUpdate({
+          target: [bankHolidayCache.region, bankHolidayCache.year],
+          set: { payload: events as unknown[], fetchedAt: now }
+        })
+        .run();
 
       return events;
     } catch (error) {

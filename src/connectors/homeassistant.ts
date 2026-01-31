@@ -1,4 +1,5 @@
-import prisma from '../db';
+import db from '../db';
+import { locationEvents } from '../db/schema';
 import { createLogger } from '../logger';
 
 interface HAConfig {
@@ -33,15 +34,15 @@ export class HomeAssistantConnector {
       const attributes = data.attributes;
 
       if (attributes.latitude && attributes.longitude) {
-        await prisma.locationEvent.create({
-            data: {
-                source: 'homeassistant',
-                latitude: attributes.latitude,
-                longitude: attributes.longitude,
-                name: data.state !== 'not_home' ? data.state : undefined,
-                expiresAt: new Date(Date.now() + 60 * 60 * 1000)
-            }
-        });
+        const now = new Date();
+        db.insert(locationEvents).values({
+          source: 'homeassistant',
+          latitude: attributes.latitude,
+          longitude: attributes.longitude,
+          name: data.state !== 'not_home' ? data.state : null,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+          createdAt: now
+        }).run();
       }
 
     } catch (error) {

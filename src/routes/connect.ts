@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { createConnection, createAuthCode, getClient } from '../services/auth';
+import { createConnectionWithAuthCode, getClient } from '../services/auth';
 import { createLogger } from '../logger';
 import { hasMasterKey } from '../utils/masterKey';
 import { validateConnectConfig } from '../config/schema/mcp';
@@ -159,9 +159,10 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
-        const connection = await createConnection(name, publicConfig, secretConfig);
-        const code = await createAuthCode(
-            connection.id,
+        const { connectionId, code } = await createConnectionWithAuthCode(
+            name,
+            publicConfig,
+            secretConfig,
             redirect_uri,
             state,
             code_challenge,

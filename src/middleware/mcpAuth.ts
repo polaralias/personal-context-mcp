@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { createLogger } from '../logger';
 import { getConnection, decryptConfig, validateApiKey, hashString } from '../services/auth';
-import prisma from '../db';
+import db from '../db';
+import { apiKeys, sessions, userConfigs } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { mcpRateLimiter } from '../utils/rateLimit';
 import { apiError, ErrorCode } from '../utils/errors';
 
@@ -31,10 +33,7 @@ const verifyAccessToken = async (token: string): Promise<string | null> => {
     if (!sessionId || !secret) return null;
 
     try {
-        const session = await prisma.session.findUnique({
-            where: { id: sessionId },
-            include: { connection: true }
-        });
+        const session = db.select().from(sessions).where(eq(sessions.id, sessionId)).get();
 
         if (!session) return null;
         if (session.revoked) return null;
@@ -81,21 +80,27 @@ export const authenticateMcp = async (req: Request, res: Response, next: NextFun
 
             const keyHash = hashString(candidateKey);
             try {
-                const apiKey = await prisma.apiKey.findUnique({
-                    where: { keyHash },
-                    include: { userConfig: true }
-                });
+                const apiKeyRow = db.select({
+                    apiKey: apiKeys,
+                    userConfig: userConfigs
+                })
+                    .from(apiKeys)
+                    .leftJoin(userConfigs, eq(apiKeys.userConfigId, userConfigs.id))
+                    .where(eq(apiKeys.keyHash, keyHash))
+                    .get();
 
                 // Check if revoked (either key or config)
-                if (apiKey && !apiKey.revokedAt) {
+                if (apiKeyRow?.apiKey && !apiKeyRow.apiKey.revokedAt && apiKeyRow.userConfig) {
                     // Decrypt config
-                    const config = decryptConfig(apiKey.userConfig.configEnc);
+                    const config = decryptConfig(apiKeyRow.userConfig.configEnc);
                     req.mcpConfig = config;
 
                     // Async update last used
-                    prisma.apiKey.update({
-                        where: { id: apiKey.id },
-                        data: { lastUsedAt: new Date() }
+                    Promise.resolve().then(() => {
+                        db.update(apiKeys)
+                            .set({ lastUsedAt: new Date() })
+                            .where(eq(apiKeys.id, apiKeyRow.apiKey.id))
+                            .run();
                     }).catch(() => { });
 
                     return next();

@@ -3,7 +3,9 @@ import { HomeAssistantConnector } from './connectors/homeassistant';
 import { GoogleConnector } from './connectors/google';
 import { HolidayService } from './services/holiday';
 import { ApiKeyService } from './services/apiKeyService';
-import prisma from './db';
+import db from './db';
+import { locationEvents, workStatusEvents } from './db/schema';
+import { lt } from 'drizzle-orm';
 import { createLogger } from './logger';
 
 const logger = createLogger('jobs');
@@ -57,25 +59,17 @@ export function startJobs() {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-            const deletedWork = await prisma.workStatusEvent.deleteMany({
-                where: {
-                    createdAt: {
-                        lt: cutoffDate
-                    }
-                }
-            });
+            const deletedWork = db.delete(workStatusEvents)
+                .where(lt(workStatusEvents.createdAt, cutoffDate))
+                .run();
 
-            const deletedLocation = await prisma.locationEvent.deleteMany({
-                where: {
-                    createdAt: {
-                        lt: cutoffDate
-                    }
-                }
-            });
+            const deletedLocation = db.delete(locationEvents)
+                .where(lt(locationEvents.createdAt, cutoffDate))
+                .run();
 
             logger.info({
-                deletedWork: deletedWork.count,
-                deletedLocation: deletedLocation.count,
+                deletedWork: deletedWork.changes,
+                deletedLocation: deletedLocation.changes,
                 daysToKeep
             }, 'data cleanup complete');
         } catch (error) {

@@ -1,5 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import prisma from '../db';
+import db from '../db';
+import { locationEvents, scheduledStatus, workStatusEvents } from '../db/schema';
+import { desc, eq, gt, isNull, or } from 'drizzle-orm';
 import { HolidayService } from './holiday';
 
 // Types
@@ -25,11 +26,9 @@ export interface Status {
 
 export class StatusResolver {
   private static instance: StatusResolver;
-  private prisma: PrismaClient;
   private holidayService: HolidayService;
 
   private constructor() {
-    this.prisma = prisma;
     this.holidayService = HolidayService.getInstance();
   }
 
@@ -58,9 +57,10 @@ export class StatusResolver {
     // For resolver tests, we use 'date' to ensure finding what was valid AT THAT TIME.
     const baseWorkEvent = await this.findLatestValidWorkEvent(date);
 
-    const latestLocationEvent = await this.prisma.locationEvent.findFirst({
-      orderBy: { createdAt: 'desc' },
-    });
+    const latestLocationEvent = db.select()
+      .from(locationEvents)
+      .orderBy(desc(locationEvents.createdAt))
+      .get();
 
     // 3. Start with Base Status
     let workStatus: WorkStatus = baseWorkEvent?.status || 'off';
@@ -72,9 +72,10 @@ export class StatusResolver {
     }
 
     // 5. Check for Scheduled Overrides (Exact Date)
-    const scheduled = await this.prisma.scheduledStatus.findUnique({
-      where: { date: dateString }
-    });
+    const scheduled = db.select()
+      .from(scheduledStatus)
+      .where(eq(scheduledStatus.date, dateString))
+      .get();
 
     if (scheduled && scheduled.patch) {
       const patch = scheduled.patch as any;
@@ -86,9 +87,10 @@ export class StatusResolver {
     // 6. Check for "Now" Overrides (TTL) - ONLY if resolving for TODAY
     const isToday = dateString === now.toISOString().split('T')[0];
     if (isToday) {
-      const latestEvent = await this.prisma.workStatusEvent.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
+      const latestEvent = db.select()
+        .from(workStatusEvents)
+        .orderBy(desc(workStatusEvents.createdAt))
+        .get();
 
       if (latestEvent && latestEvent.expiresAt && latestEvent.expiresAt > now) {
         workStatus = latestEvent.status;
@@ -129,14 +131,13 @@ export class StatusResolver {
   // Find the latest event that is either permanent (no expiresAt) OR not yet expired at target date.
   private async findLatestValidWorkEvent(targetDate: Date) {
     // To satisfy tests that mock NOW, we use gt: targetDate
-    return this.prisma.workStatusEvent.findFirst({
-      where: {
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: targetDate } }
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    return db.select()
+      .from(workStatusEvents)
+      .where(or(
+        isNull(workStatusEvents.expiresAt),
+        gt(workStatusEvents.expiresAt, targetDate)
+      ))
+      .orderBy(desc(workStatusEvents.createdAt))
+      .get();
   }
 }

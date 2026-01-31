@@ -8,7 +8,7 @@ import wellKnownRoutes from './routes/well-known';
 import { handleMcpRequest } from './server/mcp';
 import { authenticateMcp } from './middleware/mcpAuth';
 import { startJobs } from './jobs';
-import { runMigrations } from './db';
+import { initDatabase } from './db';
 import { requestLogger } from './middleware/logger';
 import { createLogger } from './logger';
 import { getMasterKeyInfo } from './utils/masterKey';
@@ -160,10 +160,10 @@ if (require.main === module) {
         }
       }
 
-      logger.info('Connecting to database and running migrations...');
+      logger.info('Connecting to database and initializing schema...');
       try {
-        await runMigrations();
-        logger.info('Migrations completed successfully');
+        initDatabase();
+        logger.info('Database initialization completed successfully');
         const host = process.env.HOST || '0.0.0.0';
         const server = app.listen(Number(port), host, () => {
           logger.info({ port, host, node_env: process.env.NODE_ENV }, 'SERVER STARTED AND LISTENING');

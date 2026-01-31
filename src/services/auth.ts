@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import prisma from '../db';
+import db from '../db';
+import { authCodes, clients, connections, sessions, userConfigs, apiKeys } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { createLogger } from '../logger';
 import { getMasterKeyBytes } from '../utils/masterKey';
 
@@ -84,19 +86,31 @@ export const decryptConfig = (encryptedString: string): any => {
 // --- Connection Operations ---
 
 export const createConnection = async (name: string | null, publicConfig: any, secretConfig: any) => {
-    return prisma.connection.create({
-        data: {
-            name,
-            config: publicConfig,
-            encryptedSecrets: encryptConfig(secretConfig)
-        }
-    });
+    const now = new Date();
+    const connectionId = crypto.randomUUID();
+    const encryptedSecrets = encryptConfig(secretConfig);
+
+    db.insert(connections).values({
+        id: connectionId,
+        name,
+        config: publicConfig ?? null,
+        encryptedSecrets,
+        createdAt: now,
+        updatedAt: now
+    }).run();
+
+    return {
+        id: connectionId,
+        name,
+        config: publicConfig ?? null,
+        encryptedSecrets,
+        createdAt: now,
+        updatedAt: now
+    };
 };
 
 export const getConnection = async (connectionId: string) => {
-    return prisma.connection.findUnique({
-        where: { id: connectionId }
-    });
+    return db.select().from(connections).where(eq(connections.id, connectionId)).get();
 };
 
 // --- Auth Code Operations ---
@@ -112,29 +126,26 @@ export const createAuthCode = async (
     const rawCode = crypto.randomBytes(32).toString('hex');
     const codeHash = hashString(rawCode);
     const expiresAt = new Date(Date.now() + (parseInt(process.env.CODE_TTL_SECONDS || '90') * 1000));
+    const now = new Date();
 
-    await prisma.authCode.create({
-        data: {
-            code: codeHash,
-            connectionId,
-            redirectUri,
-            state,
-            codeChallenge,
-            codeChallengeMethod,
-            expiresAt,
-            clientId
-        }
-    });
+    db.insert(authCodes).values({
+        code: codeHash,
+        connectionId,
+        redirectUri,
+        state: state ?? null,
+        codeChallenge,
+        codeChallengeMethod,
+        expiresAt,
+        createdAt: now,
+        clientId
+    }).run();
 
     return rawCode;
 };
 
 export const findAndValidateAuthCode = async (rawCode: string) => {
     const codeHash = hashString(rawCode);
-    const authCode = await prisma.authCode.findUnique({
-        where: { code: codeHash },
-        include: { connection: true }
-    });
+    const authCode = db.select().from(authCodes).where(eq(authCodes.code, codeHash)).get();
 
     if (!authCode) return null;
     if (authCode.expiresAt < new Date()) return null;
@@ -145,9 +156,7 @@ export const findAndValidateAuthCode = async (rawCode: string) => {
 export const markAuthCodeUsed = async (rawCodeHash: string) => {
     // Requirements say "Deletes auth code (one-time use)".
     // So we delete it.
-    return prisma.authCode.delete({
-        where: { code: rawCodeHash }
-    });
+    return db.delete(authCodes).where(eq(authCodes.code, rawCodeHash)).run();
 };
 
 // --- Session Operations ---
@@ -160,14 +169,40 @@ export const createSession = async (connectionId: string) => {
     const tokenHash = await bcrypt.hash(rawToken, 10);
 
     const expiresAt = new Date(Date.now() + (parseInt(process.env.TOKEN_TTL_SECONDS || '3600') * 1000));
+    const now = new Date();
 
-    await prisma.session.create({
-        data: {
+    db.insert(sessions).values({
+        id: sessionId,
+        connectionId,
+        tokenHash,
+        expiresAt,
+        revoked: false,
+        createdAt: now
+    }).run();
+
+    return {
+        accessToken: `${sessionId}:${rawToken}`,
+        expiresIn: parseInt(process.env.TOKEN_TTL_SECONDS || '3600')
+    };
+};
+
+export const createSessionFromAuthCode = async (authCode: { code: string; connectionId: string }) => {
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const sessionId = crypto.randomUUID();
+    const tokenHash = await bcrypt.hash(rawToken, 10);
+    const expiresAt = new Date(Date.now() + (parseInt(process.env.TOKEN_TTL_SECONDS || '3600') * 1000));
+    const now = new Date();
+
+    db.transaction((tx) => {
+        tx.delete(authCodes).where(eq(authCodes.code, authCode.code)).run();
+        tx.insert(sessions).values({
             id: sessionId,
-            connectionId,
+            connectionId: authCode.connectionId,
             tokenHash,
-            expiresAt
-        }
+            expiresAt,
+            revoked: false,
+            createdAt: now
+        }).run();
     });
 
     return {
@@ -182,18 +217,38 @@ export const createClient = async (
     clientName: string | undefined,
     redirectUris: string[]
 ) => {
-    return prisma.client.create({
-        data: {
-            clientName,
-            redirectUris: redirectUris,
-        }
+    const now = new Date();
+    const clientId = crypto.randomUUID();
+
+    db.transaction((tx) => {
+        tx.insert(clients).values({
+            clientId,
+            clientName: clientName ?? null,
+            redirectUris,
+            tokenEndpointAuthMethod: 'none',
+            grantTypes: [],
+            responseTypes: [],
+            scope: null,
+            createdAt: now,
+            updatedAt: now
+        }).run();
     });
+
+    return {
+        clientId,
+        clientName: clientName ?? null,
+        redirectUris,
+        tokenEndpointAuthMethod: 'none',
+        grantTypes: [],
+        responseTypes: [],
+        scope: null,
+        createdAt: now,
+        updatedAt: now
+    };
 };
 
 export const getClient = async (clientId: string) => {
-    return prisma.client.findUnique({
-        where: { clientId }
-    });
+    return db.select().from(clients).where(eq(clients.clientId, clientId)).get();
 };
 
 // --- User Config (API Key) Operations ---
@@ -203,25 +258,75 @@ export const createUserBoundKey = async (config: any) => {
     const configEnc = encryptConfig(config);
 
     // Create User Config
-    const userConfig = await prisma.userConfig.create({
-        data: {
-            serverId: 'default',
-            configEnc
-        }
-    });
+    const now = new Date();
+    const userConfigId = crypto.randomUUID();
 
     // Generate Key
     const rawKey = `mcp_sk_${crypto.randomBytes(32).toString('hex')}`;
     const keyHash = hashString(rawKey);
 
-    await prisma.apiKey.create({
-        data: {
-            userConfigId: userConfig.id,
-            keyHash
-        }
+    db.transaction((tx) => {
+        tx.insert(userConfigs).values({
+            id: userConfigId,
+            serverId: 'default',
+            configEnc,
+            configFingerprint: null,
+            createdAt: now,
+            updatedAt: now
+        }).run();
+
+        tx.insert(apiKeys).values({
+            id: crypto.randomUUID(),
+            userConfigId,
+            keyHash,
+            createdAt: now
+        }).run();
     });
 
     return rawKey;
+};
+
+export const createConnectionWithAuthCode = async (
+    name: string | null,
+    publicConfig: any,
+    secretConfig: any,
+    redirectUri: string,
+    state: string | undefined,
+    codeChallenge: string,
+    codeChallengeMethod: string,
+    clientId: string
+) => {
+    const now = new Date();
+    const connectionId = crypto.randomUUID();
+    const encryptedSecrets = encryptConfig(secretConfig);
+    const rawCode = crypto.randomBytes(32).toString('hex');
+    const codeHash = hashString(rawCode);
+    const expiresAt = new Date(Date.now() + (parseInt(process.env.CODE_TTL_SECONDS || '90') * 1000));
+
+    db.transaction((tx) => {
+        tx.insert(connections).values({
+            id: connectionId,
+            name,
+            config: publicConfig ?? null,
+            encryptedSecrets,
+            createdAt: now,
+            updatedAt: now
+        }).run();
+
+        tx.insert(authCodes).values({
+            code: codeHash,
+            connectionId,
+            redirectUri,
+            state: state ?? null,
+            clientId,
+            codeChallenge,
+            codeChallengeMethod,
+            expiresAt,
+            createdAt: now
+        }).run();
+    });
+
+    return { connectionId, code: rawCode };
 };
 
 export const validateApiKey = (apiKey: string): boolean => {
