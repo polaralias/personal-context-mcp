@@ -40,7 +40,8 @@ export class StatusResolver {
   }
 
   async resolveStatus(date: Date = new Date()): Promise<Status> {
-    const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const isoDate = date.toISOString();
+    const dateString = isoDate.split('T')[0] ?? isoDate.slice(0, 10); // YYYY-MM-DD
     const resolvedAt = new Date().toISOString();
     const now = new Date();
     const locationStaleHours = Number(process.env.LOCATION_STALE_HOURS ?? 6);
@@ -85,7 +86,9 @@ export class StatusResolver {
     }
 
     // 6. Check for "Now" Overrides (TTL) - ONLY if resolving for TODAY
-    const isToday = dateString === now.toISOString().split('T')[0];
+    const nowIsoDate = now.toISOString();
+    const todayString = nowIsoDate.split('T')[0] ?? nowIsoDate.slice(0, 10);
+    const isToday = dateString === todayString;
     if (isToday) {
       const latestEvent = db.select()
         .from(workStatusEvents)

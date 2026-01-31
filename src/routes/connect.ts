@@ -159,7 +159,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
-        const { connectionId, code } = await createConnectionWithAuthCode(
+        const { code } = await createConnectionWithAuthCode(
             name,
             publicConfig,
             secretConfig,

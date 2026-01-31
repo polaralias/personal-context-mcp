@@ -91,10 +91,9 @@ export class TrackerService {
 
     const whereClause = filters.length ? and(...filters) : undefined;
 
-    let query = db.select().from(locationEvents);
-    if (whereClause) {
-      query = query.where(whereClause);
-    }
+    const query = whereClause
+      ? db.select().from(locationEvents).where(whereClause)
+      : db.select().from(locationEvents);
 
     return query.orderBy(desc(locationEvents.createdAt)).limit(limit).all();
   }
@@ -135,10 +134,9 @@ export class TrackerService {
     }
 
     const whereClause = filters.length ? and(...filters) : undefined;
-    let query = db.select().from(scheduledStatus);
-    if (whereClause) {
-      query = query.where(whereClause);
-    }
+    const query = whereClause
+      ? db.select().from(scheduledStatus).where(whereClause)
+      : db.select().from(scheduledStatus);
 
     return query.orderBy(scheduledStatus.date).all();
   }
