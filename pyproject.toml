@@ -1,0 +1,19 @@
+[project]
+name = "personal-context-mcp"
+version = "0.1.0"
+description = "Contained MCP server for Personal Context"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastmcp>=3.1.0"
+]
+
+[project.scripts]
+personal-context-mcp = "server:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["server"]
