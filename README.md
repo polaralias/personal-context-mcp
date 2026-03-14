@@ -10,6 +10,11 @@ Standalone Python/FastMCP server for Personal Context with direct HTTP transport
 - Persists the SQLite database under `./state/data`
 - Preserves Home Assistant polling and Google Maps enrichment configuration
 
+## Reference Docs
+
+- [Tool reference](docs/tool-reference.md) contains the full public tool inventory and parameter details (14 tools).
+- [Configuration reference](docs/configuration.md) explains the supported env vars, storage, integrations, auth modes, and deployment notes.
+
 ## Configuration
 
 1. Copy `.env.example` to `.env`
