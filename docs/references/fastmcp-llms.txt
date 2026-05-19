@@ -1,0 +1,10 @@
+FastMCP is the transport and tool framework used by this repository.
+
+Repository usage:
+- server object created in server.py
+- filesystem source and deployment config in fastmcp.json
+- CLI workflow used by scripts/run_server.py
+
+Why it matters here:
+- tool contracts are part of the public API
+- auth and transport behavior should be documented independently from framework defaults when important

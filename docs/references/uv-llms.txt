@@ -1,0 +1,10 @@
+uv is the Python package and environment workflow used by this repository.
+
+Repository usage:
+- dependency lockfile: uv.lock
+- environment bootstrap in Dockerfile: uv sync --no-dev
+- local fallback in scripts/run_server.py when fastmcp is not found in .venv
+
+Why it matters here:
+- future setup docs should explain uv as a first-class local workflow
+- test harness work should assume uv-based dependency management

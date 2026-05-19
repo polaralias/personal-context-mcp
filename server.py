@@ -45,6 +45,8 @@ DEFAULT_NEARBY_PLACE_FIELD_MASK = ",".join(
     )
 )
 VALID_NEARBY_RANK_PREFERENCES = {"POPULARITY", "DISTANCE"}
+VALID_LOCATION_SOURCES = {"manual", "homeassistant"}
+VALID_SCHEDULED_CONTEXT_SOURCES = {"manual", "automated"}
 
 
 def _runtime_env(*names: str, default: str = "") -> str:
@@ -89,7 +91,7 @@ def _parse_optional_datetime(value: str | None, label: str) -> datetime | None:
 
 
 def _resolve_database_path() -> str:
-    default = "sqlite:///data/mcp.db"
+    default = "data/mcp.db"
     raw = _runtime_env("DATABASE_URL", "PERSONAL_DATABASE_URL", default=default)
     if raw in {":memory:", "sqlite::memory:", "file::memory:"}:
         return ":memory:"
@@ -237,9 +239,47 @@ class StaticApiKeyVerifier(TokenVerifier):
 class LocationRecord:
     latitude: float
     longitude: float
-    location_name: str | None
-    source: str
-    timestamp: str
+    locationName: str | None
+    source: str | None = None
+    timestamp: str | None = None
+
+
+def _effective_location_payload(location: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not location:
+        return None
+
+    payload = {
+        "latitude": float(location["latitude"]),
+        "longitude": float(location["longitude"]),
+        "locationName": location.get("locationName", location.get("location_name")),
+    }
+    if location.get("source") is not None:
+        payload["source"] = location["source"]
+    if location.get("timestamp") is not None:
+        payload["timestamp"] = location["timestamp"]
+    return payload
+
+
+def _normalize_scheduled_location(location: dict[str, Any]) -> dict[str, Any]:
+    if "latitude" not in location or "longitude" not in location:
+        raise ValueError("Scheduled location must include latitude and longitude")
+
+    try:
+        latitude = float(location["latitude"])
+        longitude = float(location["longitude"])
+    except (TypeError, ValueError):
+        raise ValueError("Scheduled location coordinates must be numeric") from None
+
+    location_name = location.get("locationName", location.get("location_name"))
+    if location_name is not None:
+        location_name = str(location_name).strip() or None
+
+    normalized = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "locationName": location_name,
+    }
+    return normalized
 
 
 class GoogleMapsService:
@@ -308,6 +348,12 @@ class GoogleMapsService:
                 payload = json.loads(response.read().decode("utf-8"))
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
             message = str(exc)
+            self._record_lookup("error", message)
+            logger.warning("Google reverse geocode failed: %s", message)
+            return None
+
+        if not isinstance(payload, dict):
+            message = "Malformed Google geocode response"
             self._record_lookup("error", message)
             logger.warning("Google reverse geocode failed: %s", message)
             return None
@@ -850,16 +896,18 @@ class PersonalContextStore:
         return self._row_to_location_event(row) if row else None
 
     def latest_valid_work_event(self, target: datetime) -> sqlite3.Row | None:
+        target_ms = int(target.timestamp() * 1000)
         with self._lock:
             return self._conn.execute(
                 """
                 SELECT *
                 FROM work_status_events
-                WHERE expires_at IS NULL OR expires_at > ?
+                WHERE created_at <= ?
+                  AND (expires_at IS NULL OR expires_at > ?)
                 ORDER BY created_at DESC
                 LIMIT 1
                 """,
-                (int(target.timestamp() * 1000),),
+                (target_ms, target_ms),
             ).fetchone()
 
     def latest_work_event(self) -> sqlite3.Row | None:
@@ -872,6 +920,21 @@ class PersonalContextStore:
         with self._lock:
             return self._conn.execute(
                 "SELECT * FROM location_events ORDER BY created_at DESC LIMIT 1"
+            ).fetchone()
+
+    def latest_valid_location_event(self, target: datetime) -> sqlite3.Row | None:
+        target_ms = int(target.timestamp() * 1000)
+        with self._lock:
+            return self._conn.execute(
+                """
+                SELECT *
+                FROM location_events
+                WHERE created_at <= ?
+                  AND (expires_at IS NULL OR expires_at > ?)
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (target_ms, target_ms),
             ).fetchone()
 
     def cleanup_old_events(self, retention_days: int) -> dict[str, Any]:
@@ -918,8 +981,9 @@ class PersonalContextStore:
         work_status: str | None,
         location: dict[str, Any] | None,
         reason: str | None,
+        source: str,
     ) -> dict[str, Any]:
-        patch: dict[str, Any] = {}
+        patch: dict[str, Any] = {"source": source}
         if work_status:
             patch["workStatus"] = work_status
         if location:
@@ -1038,9 +1102,13 @@ class HolidayService:
     def __init__(self, store: PersonalContextStore) -> None:
         self._store = store
 
-    def fetch_holidays(self, region: str = "england-and-wales") -> list[dict[str, Any]]:
-        year = _now_utc().year
-        cached = self._store.holiday_cache(region, year)
+    def fetch_holidays(
+        self,
+        region: str = "england-and-wales",
+        year: int | None = None,
+    ) -> list[dict[str, Any]]:
+        target_year = year if year is not None else _now_utc().year
+        cached = self._store.holiday_cache(region, target_year)
 
         if cached:
             fetched_at = datetime.fromtimestamp(cached["fetched_at"] / 1000, tz=timezone.utc)
@@ -1058,7 +1126,7 @@ class HolidayService:
                 raise ValueError(f"Region {region} not found in holiday data")
 
             events = payload[region]["events"]
-            self._store.upsert_holiday_cache(region, year, events)
+            self._store.upsert_holiday_cache(region, target_year, events)
             return events
         except (URLError, ValueError, TimeoutError, json.JSONDecodeError):
             if cached:
@@ -1067,7 +1135,7 @@ class HolidayService:
 
     def is_bank_holiday(self, target: datetime, region: str = "england-and-wales") -> bool:
         try:
-            holidays = self.fetch_holidays(region)
+            holidays = self.fetch_holidays(region, year=target.year)
         except Exception:
             return False
 
@@ -1084,45 +1152,77 @@ class StatusResolver:
         date = (target or _now_utc()).astimezone(timezone.utc)
         date_str = date.strftime("%Y-%m-%d")
         now = _now_utc()
+        is_current_date = date_str == now.strftime("%Y-%m-%d")
 
         is_weekend = date.weekday() >= 5
         is_holiday = self._holidays.is_bank_holiday(date)
 
         base_work_event = self._store.latest_valid_work_event(date)
-        latest_location_event = self._store.latest_location_event()
 
         work_status = base_work_event["status"] if base_work_event else "off"
+        work_status_provenance: dict[str, Any] = {"source": "baseline"}
+        reason = None
+        if base_work_event:
+            work_status_provenance = {
+                "source": "work-status-event",
+                "eventSource": base_work_event["source"],
+            }
+            reason = base_work_event["reason"]
 
         if is_weekend or is_holiday:
             work_status = "off"
+            work_status_provenance = {"source": "baseline"}
+            reason = None
 
         schedule = self._store.get_schedule(date_str)
         patch = schedule.get("patch") if schedule else None
         if patch and patch.get("workStatus"):
             work_status = patch["workStatus"]
+            work_status_provenance = {
+                "source": "scheduled-context",
+                "scheduledContextSource": patch.get("source", "manual"),
+            }
+            reason = patch.get("reason")
 
-        if date_str == now.strftime("%Y-%m-%d"):
-            latest = self._store.latest_work_event()
-            if latest and latest["expires_at"] and latest["expires_at"] > int(now.timestamp() * 1000):
+        if is_current_date:
+            latest = self._store.latest_valid_work_event(now)
+            if latest:
                 work_status = latest["status"]
+                work_status_provenance = {
+                    "source": "work-status-event",
+                    "eventSource": latest["source"],
+                }
+                reason = latest["reason"]
 
         location = None
+        location_provenance: dict[str, Any] = {"source": "none"}
+        schedule_location = patch.get("location") if patch and patch.get("location") else None
+        latest_location_event = self._store.latest_valid_location_event(now) if is_current_date else None
         if latest_location_event:
             created = datetime.fromtimestamp(latest_location_event["created_at"] / 1000, tz=timezone.utc)
-            expires_at = latest_location_event["expires_at"]
             stale_hours = float(_runtime_env("LOCATION_STALE_HOURS", default="6") or "6")
             stale_window = timedelta(hours=stale_hours if stale_hours > 0 else 6)
+            source = latest_location_event["source"]
 
-            expired = bool(expires_at and expires_at < int(now.timestamp() * 1000))
             stale = now - created > stale_window
-            if not expired and not stale:
-                location = LocationRecord(
+            if source in VALID_LOCATION_SOURCES and not stale:
+                location = _effective_location_payload(LocationRecord(
                     latitude=latest_location_event["lat"],
                     longitude=latest_location_event["lon"],
-                    location_name=latest_location_event["name"],
-                    source=latest_location_event["source"],
+                    locationName=latest_location_event["name"],
+                    source=source,
                     timestamp=_to_iso(created),
-                ).__dict__
+                ).__dict__)
+                location_provenance = {
+                    "source": "location-event",
+                    "eventSource": source,
+                }
+        if location is None and schedule_location:
+            location = _effective_location_payload(schedule_location)
+            location_provenance = {
+                "source": "scheduled-context",
+                "scheduledContextSource": patch.get("source", "manual"),
+            }
 
         last_updated = _to_iso(now)
         if base_work_event:
@@ -1136,13 +1236,15 @@ class StatusResolver:
             "weekend": is_weekend,
             "workStatus": work_status,
             "location": location,
+            "reason": reason,
+            "workStatusProvenance": work_status_provenance,
+            "locationProvenance": location_provenance,
             "lastUpdated": last_updated,
         }
 
 
 def _load_api_keys() -> list[str]:
-    api_key_mode = _runtime_env("API_KEY_MODE", "PERSONAL_API_KEY_MODE", default="").strip().lower()
-    if api_key_mode == "disabled":
+    if _auth_is_disabled():
         return []
     keys: list[str] = []
     service_key = _runtime_env("PERSONAL_CONTEXT_MCP_API_KEY")
@@ -1162,12 +1264,24 @@ def _load_api_keys() -> list[str]:
     return list(dict.fromkeys(keys))
 
 
+def _auth_is_disabled() -> bool:
+    return _runtime_env("API_KEY_MODE", "PERSONAL_API_KEY_MODE", default="").strip().lower() == "disabled"
+
+
+def _health_auth_mode() -> str:
+    if _auth_is_disabled():
+        return "disabled"
+    if api_keys:
+        return "bearer-token"
+    return "unconfigured"
+
+
 def _health_payload(database_path: str) -> dict[str, Any]:
     payload = {
         "status": "ok",
         "server": "personal-context-mcp",
         "databasePath": database_path,
-        "mcpAuthMode": _runtime_env("API_KEY_MODE", "PERSONAL_API_KEY_MODE", default="static-or-disabled") or "static-or-disabled",
+        "mcpAuthMode": _health_auth_mode(),
         "googleApiConfigured": bool(_runtime_env("GOOGLE_API_KEY", "PERSONAL_GOOGLE_API_KEY")),
         "googlePollCron": _runtime_env("GOOGLE_POLL_CRON", "PERSONAL_GOOGLE_POLL_CRON"),
         "homeAssistantConfigured": bool(
@@ -1175,28 +1289,6 @@ def _health_payload(database_path: str) -> dict[str, Any]:
         ),
         "locationStaleHours": _runtime_env("LOCATION_STALE_HOURS", default="6"),
         "holidayFetchTimeoutMs": _runtime_env("HOLIDAY_FETCH_TIMEOUT_MS", default="5000"),
-        "codeTtlSeconds": _runtime_env("CODE_TTL_SECONDS", "PERSONAL_CODE_TTL_SECONDS", default="90"),
-        "tokenTtlSeconds": _runtime_env("TOKEN_TTL_SECONDS", "PERSONAL_TOKEN_TTL_SECONDS", default="3600"),
-        "apiKeyIssueRateLimit": _runtime_env(
-            "API_KEY_ISSUE_RATELIMIT",
-            "PERSONAL_API_KEY_ISSUE_RATELIMIT",
-            default="3",
-        ),
-        "apiKeyIssueWindowSeconds": _runtime_env(
-            "API_KEY_ISSUE_WINDOW_SECONDS",
-            "PERSONAL_API_KEY_ISSUE_WINDOW_SECONDS",
-            default="3600",
-        ),
-        "mcpRateLimitPerKey": _runtime_env(
-            "MCP_RATELIMIT_PER_KEY",
-            "PERSONAL_MCP_RATELIMIT_PER_KEY",
-            default="60",
-        ),
-        "mcpRateLimitWindowSeconds": _runtime_env(
-            "MCP_RATELIMIT_WINDOW_SECONDS",
-            "PERSONAL_MCP_RATELIMIT_WINDOW_SECONDS",
-            default="60",
-        ),
     }
     payload["googleRuntime"] = google_maps.status()
     payload["homeAssistantRuntime"] = home_assistant.status()
@@ -1213,7 +1305,7 @@ home_assistant = HomeAssistantConnector(store, google_maps)
 source_manager = RuntimeSourceManager(store, google_maps, home_assistant)
 
 api_keys = _load_api_keys()
-auth = StaticApiKeyVerifier(api_keys, base_url=_runtime_env("BASE_URL")) if api_keys else None
+auth = None if _auth_is_disabled() else StaticApiKeyVerifier(api_keys, base_url=_runtime_env("BASE_URL"))
 
 @lifespan
 async def runtime_lifespan(_server):
@@ -1247,12 +1339,6 @@ async def healthz(_request):
 def status_get(date: str | None = None) -> dict[str, Any]:
     target = _parse_date(date) if date else None
     return resolver.resolve(target)
-
-
-@server.tool
-def status_set_override(status: str, reason: str | None = None, ttlSeconds: int | None = None) -> dict[str, Any]:
-    store.insert_work_status(status, reason, ttlSeconds)
-    return resolver.resolve()
 
 
 @server.tool
@@ -1296,6 +1382,10 @@ def status_set_location(
     source: str = "manual",
     ttlSeconds: int | None = None,
 ) -> dict[str, Any]:
+    if source not in VALID_LOCATION_SOURCES:
+        raise ValueError("Invalid location source")
+    if source != "manual":
+        raise ValueError("Public location writes must use manual source")
     resolved_name = google_maps.enrich_name(latitude, longitude, locationName)
     store.insert_location(latitude, longitude, resolved_name, source, ttlSeconds)
     resolved = resolver.resolve()
@@ -1386,6 +1476,8 @@ def status_get_location_history(
     to: str | None = None,
     limit: int | None = None,
 ) -> dict[str, Any]:
+    if limit is not None and limit < 1:
+        raise ValueError("limit must be at least 1")
     start = _parse_optional_datetime(from_, "from")
     end = _parse_optional_datetime(to, "to")
     rows = store.location_history(start, end, limit or 50)
@@ -1412,10 +1504,18 @@ def status_schedule_set(
     workStatus: str | None = None,
     location: dict[str, Any] | None = None,
     reason: str | None = None,
+    source: str = "manual",
 ) -> dict[str, Any]:
     if not DATE_RE.match(date):
         raise ValueError("Invalid date format. Use YYYY-MM-DD")
-    store.upsert_schedule(date, workStatus, location, reason)
+    if not workStatus and not location:
+        raise ValueError("Scheduled context must include workStatus, location, or both")
+    if source not in VALID_SCHEDULED_CONTEXT_SOURCES:
+        raise ValueError("Invalid scheduled context source")
+    if source != "manual":
+        raise ValueError("Public scheduled-context writes must use manual source")
+    normalized_location = _normalize_scheduled_location(location) if location else None
+    store.upsert_schedule(date, workStatus, normalized_location, reason, source)
     return {"success": True}
 
 

@@ -21,8 +21,3 @@ services:
       timeout: 5s
       retries: 20
       start_period: 45s
-
-networks:
-  default:
-    name: reverse_proxy
-    external: true

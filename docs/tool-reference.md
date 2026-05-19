@@ -1,130 +1,195 @@
 # Tool Reference
 
-This reference is derived from the FastMCP tool functions defined in `server.py` and covers all 14 tools exposed by the server.
+This file describes the current tested MCP tool surface.
 
-Parameter format notes:
-- `required` means the tool call must include the field.
-- `default ...` reflects the runtime default applied by the server when the field is omitted.
-- Date values use `YYYY-MM-DD` unless a parameter explicitly says it expects a full ISO 8601 timestamp.
+Use `CONTEXT.md` for canonical domain language and `docs/product-specs/resolver-spec.md` for resolver semantics.
 
-## Status Resolution
+## Status tools
 
 ### `status_get`
 
-Resolve the effective personal context for now or for a supplied date.
+Returns effective context for now or a requested date.
 
-- Parameters:
-  - `date` | `string` | optional | Date in `YYYY-MM-DD` format. When omitted, the server resolves the current effective status.
+Parameters:
 
-### `status_set_override`
+- `date` optional `YYYY-MM-DD`
 
-Apply a temporary override on top of the normal work-status resolution rules.
+Returned effective context includes:
 
-- Parameters:
-  - `status` | `string` | required | Override status to store immediately.
-  - `reason` | `string` | optional | Free-text reason recorded with the override.
-  - `ttlSeconds` | `integer` | optional | Optional TTL for the override in seconds.
+- `effectiveDate`
+- `resolvedAt`
+- `bankHoliday`
+- `weekend`
+- `workStatus`
+- `location`
+- `reason`
+- `workStatusProvenance`
+- `locationProvenance`
+- `lastUpdated`
+
+`location` is either `null` or an object with:
+
+- `latitude`
+- `longitude`
+- `locationName`
+- `source` when the winning location came from a live location event
+- `timestamp` when the winning location came from a live location event
 
 ### `status_get_work`
 
-Return only the effective work-status portion of the resolved context.
+Returns the effective work-status slice for now or a requested date.
 
-- Parameters:
-  - `date` | `string` | optional | Date in `YYYY-MM-DD` format. When omitted, the current effective work status is returned.
+Parameters:
+
+- `date` optional `YYYY-MM-DD`
 
 ### `status_set_work`
 
-Store or replace the effective work-status override and return the resolved result.
+Appends a work-status event and returns the current effective work-status slice.
 
-- Parameters:
-  - `workStatus` | `string` | required | Work-status value to persist.
-  - `reason` | `string` | optional | Free-text reason recorded with the status entry.
-  - `ttlSeconds` | `integer` | optional | Optional TTL for the override in seconds.
+Parameters:
 
-## Location
+- `workStatus` required string
+- `reason` optional string
+- `ttlSeconds` optional integer
+
+## Location tools
 
 ### `status_get_location`
 
-Return the latest effective location snapshot from manual entry, Home Assistant, or stored state.
+Returns the current effective location slice.
 
-- Parameters: none
+Return shape:
+
+- `location` `null` or the normalized effective-location object described above
+- `effectiveDate`
 
 ### `status_set_location`
 
-Store a manual location override and optionally enrich its display name with Google APIs.
+Stores a location event and, when Google is configured, may enrich the name automatically.
 
-- Parameters:
-  - `latitude` | `number` | required | Latitude for the stored location.
-  - `longitude` | `number` | required | Longitude for the stored location.
-  - `locationName` | `string` | optional | Optional display name. If omitted, the server may reverse-geocode one.
-  - `source` | `string` | optional default `manual` | Source label stored alongside the location record.
-  - `ttlSeconds` | `integer` | optional | Optional TTL for the location override in seconds.
+Parameters:
+
+- `latitude` required number
+- `longitude` required number
+- `locationName` optional string
+- `source` optional string, default `manual`
+- `ttlSeconds` optional integer
+
+Rules:
+
+- public writes create manual location events only
+- integration-owned writes such as Home Assistant may still create `homeassistant` provenance
+
+Return shape:
+
+- `location` normalized effective-location object
+- `effectiveDate`
 
 ### `status_sync_homeassistant_location`
 
-Poll Home Assistant immediately and store the latest configured device location.
+Polls Home Assistant immediately and stores the result when configured.
 
-- Parameters: none
+Return shape:
+
+- `configured`
+- `synced`
+- `record`
+- `location`
+- `effectiveDate`
 
 ### `status_enrich_latest_location`
 
-Reverse-geocode or otherwise enrich the latest stored location record using Google APIs.
+Attempts to enrich the latest stored nameless location record using Google.
 
-- Parameters: none
+Return shape:
+
+- `configured`
+- `updated`
+- `record`
+- `location`
+- `effectiveDate`
 
 ### `places_nearby`
 
-Search nearby places around the current effective location or supplied coordinates.
+Searches nearby places using explicit coordinates or the current effective location.
 
-- Parameters:
-  - `latitude` | `number` | optional | Explicit latitude for the search origin. Must be paired with `longitude`.
-  - `longitude` | `number` | optional | Explicit longitude for the search origin. Must be paired with `latitude`.
-  - `radiusMeters` | `integer` | optional default `500` | Search radius in meters.
-  - `maxResults` | `integer` | optional default `5` | Maximum number of places to return.
-  - `includedTypes` | `array<string>` | optional | Optional Google Places types to include. When omitted, the server applies its default curated list.
-  - `rankPreference` | `string` | optional default `POPULARITY` | Ranking mode. Supported values are `POPULARITY` and `DISTANCE`.
+Parameters:
+
+- `latitude` optional number
+- `longitude` optional number
+- `radiusMeters` optional integer, default `500`
+- `maxResults` optional integer, default `5`
+- `includedTypes` optional string array
+- `rankPreference` optional string, default `POPULARITY`
+
+Return shape:
+
+- `places` normalized nearby-place results
+- `search` normalized request summary
+- `origin` chosen search origin and source
+- `defaultsApplied` boolean indicating whether default place types were used
 
 ### `status_get_location_history`
 
-List historical location records over a date-time range.
+Returns stored location events over an optional range.
 
-- Parameters:
-  - `from` | `string` | optional | Inclusive start timestamp in ISO 8601 format.
-  - `to` | `string` | optional | Inclusive end timestamp in ISO 8601 format.
-  - `limit` | `integer` | optional default `50` | Maximum number of events to return.
+Parameters:
 
-## Schedule
+- `from` optional ISO 8601 timestamp or bare date
+- `to` optional ISO 8601 timestamp or bare date
+- `limit` optional integer, default `50`, minimum `1`
+
+## Schedule tools
 
 ### `status_schedule_set`
 
-Create or replace a scheduled context entry for a specific date.
+Upserts scheduled context for one date.
 
-- Parameters:
-  - `date` | `string` | required | Date in `YYYY-MM-DD` format.
-  - `workStatus` | `string` | optional | Scheduled work-status value for that date.
-  - `location` | `object` | optional | Optional structured location object stored against the scheduled date.
-  - `reason` | `string` | optional | Free-text explanation for the scheduled entry.
+Parameters:
+
+- `date` required `YYYY-MM-DD`
+- `workStatus` optional string
+- `location` optional object with numeric `latitude`, numeric `longitude`, and optional `locationName`
+- `reason` optional string
+- `source` optional string, default `manual`
+
+Rules:
+
+- the payload must include `workStatus`, `location`, or both
+- `reason` is explanatory only
+- public writes create manual scheduled context only
+- `automated` scheduled-context provenance is reserved for system-owned scheduling inputs
+- scheduled `location` is normalized to `latitude`, `longitude`, and `locationName`
+- scheduled `location` participates in effective resolved context on the matching date
 
 ### `status_schedule_list`
 
-List scheduled context entries across an optional date range.
+Lists scheduled context entries across an optional date range.
 
-- Parameters:
-  - `from` | `string` | optional | Inclusive start date in `YYYY-MM-DD` format.
-  - `to` | `string` | optional | Inclusive end date in `YYYY-MM-DD` format.
+Parameters:
+
+- `from` optional `YYYY-MM-DD`
+- `to` optional `YYYY-MM-DD`
 
 ### `status_schedule_delete`
 
-Delete a scheduled context entry for a specific date.
+Deletes scheduled context for one date.
 
-- Parameters:
-  - `date` | `string` | required | Date in `YYYY-MM-DD` format.
+Parameters:
 
-## Holidays
+- `date` required `YYYY-MM-DD`
+
+Return shape:
+
+- `success` boolean
+
+## Holiday tool
 
 ### `holidays_list`
 
-Fetch public holidays for the requested GOV.UK holiday region.
+Returns GOV.UK bank-holiday data for a region.
 
-- Parameters:
-  - `region` | `string` | optional default `england-and-wales` | Holiday region slug such as `england-and-wales`, `scotland`, or `northern-ireland`.
+Parameters:
+
+- `region` optional string, default `england-and-wales`

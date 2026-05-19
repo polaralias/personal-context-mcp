@@ -1,78 +1,90 @@
 # Configuration Reference
 
-This guide explains the supported environment variables and deployment knobs for `personal-context-mcp`.
+This document describes configuration in three buckets:
 
-## Required settings
+- active and verified
+- active but still under contract repair
+- documented residue that should not be treated as real control until repaired
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `PERSONAL_CONTEXT_MCP_API_KEY` | Recommended | none | Service-specific bearer token accepted by the HTTP MCP endpoint. |
-| `DATABASE_URL` or default state volume | No | `sqlite:///data/mcp.db` | Storage location for the persistent SQLite database. |
+## Active auth settings
 
-## MCP client auth
+Verified active behavior:
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `MCP_API_KEY` | No | none | Generic single-key alias if you prefer a shared naming pattern across services. |
-| `MCP_API_KEYS` | No | none | Comma-separated additional bearer tokens accepted by the MCP endpoint. |
-| `API_KEY_MODE` / `PERSONAL_API_KEY_MODE` | No | static auth enabled | Set to `disabled` to turn off bearer-token checks entirely. |
+| Variable | Purpose |
+| --- | --- |
+| `PERSONAL_CONTEXT_MCP_API_KEY` | Primary bearer token accepted by `/mcp`. |
+| `MCP_API_KEY` | Additional single bearer token alias. |
+| `MCP_API_KEYS` | Comma-separated additional bearer tokens. |
+| `API_KEY_MODE` / `PERSONAL_API_KEY_MODE` | Set to `disabled` to disable bearer-token checks. |
 
-## Database and local state
+Notes:
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `DATABASE_URL` | No | `sqlite:///data/mcp.db` | Primary database URL. Relative SQLite paths are resolved inside the working directory or container. |
-| `PERSONAL_DATABASE_URL` | No | none | Service-specific alias for the database URL. |
-| `MASTER_KEY` / `PERSONAL_MASTER_KEY` | No | none | Legacy signing or encryption material retained for compatibility with earlier auth or state flows. |
+- `/mcp` auth is live-validated.
+- `/health` remains public.
 
-## Google enrichment
+## Active runtime settings
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `GOOGLE_API_KEY` / `PERSONAL_GOOGLE_API_KEY` | No | none | Google API key used for reverse-geocoding and nearby-place enrichment. |
-| `GOOGLE_POLL_CRON` / `PERSONAL_GOOGLE_POLL_CRON` | No | none | Cron schedule controlling any configured Google-driven refresh jobs. |
-| `GOOGLE_HTTP_TIMEOUT_MS` / `PERSONAL_GOOGLE_HTTP_TIMEOUT_MS` | No | `5000` | Timeout for outbound Google API requests. |
+Verified active behavior:
 
-## Home Assistant integration
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Primary database location. |
+| `PERSONAL_DATABASE_URL` | Alias for the database location. |
+| `GOOGLE_API_KEY` / `PERSONAL_GOOGLE_API_KEY` | Enables reverse geocoding and nearby-place search. |
+| `GOOGLE_POLL_CRON` / `PERSONAL_GOOGLE_POLL_CRON` | Enables scheduled Google backfill when valid. |
+| `GOOGLE_HTTP_TIMEOUT_MS` / `PERSONAL_GOOGLE_HTTP_TIMEOUT_MS` | Google request timeout. |
+| `HA_URL` | Home Assistant base URL. |
+| `HA_TOKEN` | Home Assistant access token. |
+| `HA_ENTITY_ID` | Home Assistant entity to poll. |
+| `HA_TIMEOUT_MS` / `PERSONAL_HA_TIMEOUT_MS` | Home Assistant request timeout. |
+| `HA_POLL_INTERVAL_SECONDS` / `PERSONAL_HA_POLL_INTERVAL_SECONDS` | Background HA poll interval. |
+| `HA_LOCATION_TTL_SECONDS` / `PERSONAL_HA_LOCATION_TTL_SECONDS` | TTL for HA-derived location records. |
+| `LOCATION_STALE_HOURS` | Maximum age for effective location. |
+| `HOLIDAY_FETCH_TIMEOUT_MS` | Timeout for GOV.UK holiday fetches. |
+| `DATA_RETENTION_DAYS` / `PERSONAL_DATA_RETENTION_DAYS` | Retention window for cleanup. |
+| `DATA_CLEANUP_INTERVAL_SECONDS` / `PERSONAL_DATA_CLEANUP_INTERVAL_SECONDS` | Cleanup job interval. |
+| `MCP_HOST` / `HOST` | Bind host. |
+| `MCP_PORT` / `PORT` | Bind port. |
+| `MCP_PATH` | MCP HTTP path. |
+| `MCP_TRANSPORT` / `FASTMCP_TRANSPORT` | Transport mode. |
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `HA_URL` | No | none | Base URL for the Home Assistant instance used for location polling. |
-| `HA_TOKEN` | No | none | Long-lived Home Assistant access token. |
-| `HA_ENTITY_ID` | No | none | Entity ID that represents the tracked device or person. |
-| `HA_TIMEOUT_MS` / `PERSONAL_HA_TIMEOUT_MS` | No | `5000` | Timeout for Home Assistant API requests. |
-| `HA_POLL_INTERVAL_SECONDS` / `PERSONAL_HA_POLL_INTERVAL_SECONDS` | No | `60` | Background poll interval for Home Assistant updates. |
-| `HA_LOCATION_TTL_SECONDS` / `PERSONAL_HA_LOCATION_TTL_SECONDS` | No | `600` | TTL applied to Home Assistant-derived location records. |
+## Settings under contract repair
 
-## Retention, TTLs, and rate limits
+These settings are active but their surrounding documentation or runtime contract is still being repaired:
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `LOCATION_STALE_HOURS` | No | `6` | Age threshold after which a stored location is treated as stale. |
-| `HOLIDAY_FETCH_TIMEOUT_MS` | No | `5000` | Timeout for GOV.UK bank-holiday fetches. |
-| `DATA_RETENTION_DAYS` / `PERSONAL_DATA_RETENTION_DAYS` | No | `90` | Retention window for historical data cleanup. |
-| `DATA_CLEANUP_INTERVAL_SECONDS` / `PERSONAL_DATA_CLEANUP_INTERVAL_SECONDS` | No | `3600` | Cleanup job frequency for expired records. |
-| `CODE_TTL_SECONDS` / `PERSONAL_CODE_TTL_SECONDS` | No | `90` | TTL for short-lived auth or verification codes used by retained compatibility flows. |
-| `TOKEN_TTL_SECONDS` / `PERSONAL_TOKEN_TTL_SECONDS` | No | `3600` | TTL for short-lived issued tokens used by retained compatibility flows. |
-| `API_KEY_ISSUE_RATELIMIT` / `PERSONAL_API_KEY_ISSUE_RATELIMIT` | No | `3` | Maximum key-issue attempts allowed per window. |
-| `API_KEY_ISSUE_WINDOW_SECONDS` / `PERSONAL_API_KEY_ISSUE_WINDOW_SECONDS` | No | `3600` | Window length for API-key issue rate limiting. |
-| `MCP_RATELIMIT_PER_KEY` / `PERSONAL_MCP_RATELIMIT_PER_KEY` | No | `60` | Maximum MCP requests allowed per API key per window. |
-| `MCP_RATELIMIT_WINDOW_SECONDS` / `PERSONAL_MCP_RATELIMIT_WINDOW_SECONDS` | No | `60` | Window length for per-key MCP request limiting. |
+| Variable | Current concern |
+| --- | --- |
+| `DATABASE_URL` | Default path behavior is now `./data/mcp.db` relative to the current working directory; older docs may still describe the pre-repair path. |
+| `PERSONAL_CONTEXT_MCP_PORT` | Used by compose examples, not by core runtime resolution directly. |
+| `PERSONAL_CONTEXT_MCP_HOST_PORT` | Compose-only host publishing knob. |
+| `PERSONAL_CONTEXT_MCP_PATH` | Compose helper knob rather than the primary runtime path source. |
 
-## Endpoint and transport
+## Documentary residue
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `PERSONAL_CONTEXT_MCP_PORT` | No | `3003` | Internal service port used by the compose examples. |
-| `PERSONAL_CONTEXT_MCP_HOST_PORT` | No | `3003` | Host-side published port in the bundled `docker-compose.yml`. |
-| `PERSONAL_CONTEXT_MCP_PATH` | No | `/mcp` | HTTP path where the MCP endpoint is exposed. |
-| `MCP_HOST` / `HOST` | No | `127.0.0.1` locally, `0.0.0.0` in compose | Host bind address used by `scripts/run_server.py` and FastMCP. |
-| `MCP_PORT` / `PORT` | No | `3003` | Generic runtime port override. |
-| `MCP_PATH` | No | `/mcp` | Generic runtime path override. |
-| `MCP_TRANSPORT` / `FASTMCP_TRANSPORT` | No | `streamable-http` | Transport mode. `stdio` is mainly useful for local tooling and testing. |
+These names may still appear in older docs or examples, but they should not currently be treated as implemented controls:
 
-## Files and deployment notes
+| Variable | Current state |
+| --- | --- |
+| `MASTER_KEY` / `PERSONAL_MASTER_KEY` | Not verified as active behavior. |
+| `CODE_TTL_SECONDS` / `PERSONAL_CODE_TTL_SECONDS` | Not part of the active public contract. |
+| `TOKEN_TTL_SECONDS` / `PERSONAL_TOKEN_TTL_SECONDS` | Not part of the active public contract. |
+| `API_KEY_ISSUE_RATELIMIT` / `PERSONAL_API_KEY_ISSUE_RATELIMIT` | Not verified as enforced. |
+| `API_KEY_ISSUE_WINDOW_SECONDS` / `PERSONAL_API_KEY_ISSUE_WINDOW_SECONDS` | Not verified as enforced. |
+| `MCP_RATELIMIT_PER_KEY` / `PERSONAL_MCP_RATELIMIT_PER_KEY` | Not verified as enforced. |
+| `MCP_RATELIMIT_WINDOW_SECONDS` / `PERSONAL_MCP_RATELIMIT_WINDOW_SECONDS` | Not verified as enforced. |
 
-- The bundled compose file assumes the external Docker network `reverse_proxy` already exists.
-- The default compose deployment persists SQLite data under `./state/data` so location history and schedules survive container recreation.
-- Home Assistant and Google Maps integrations are optional; the core manual schedule and status tools work without them.
+## Current caution
+
+Do not use this file as proof that a setting is enforced unless it is listed under `active and verified`.
+
+Storage note:
+
+- direct local runs default to `./data/mcp.db`
+- the container image runs from `/app`, so the same default resolves to `/app/data/mcp.db`
+- the compose mount `./state/data:/app/data` therefore preserves the default container database without requiring an override
+
+For the current repair direction, see:
+
+- `docs/SECURITY.md`
+- `docs/RELIABILITY.md`
+- `docs/archive/investigation-report.md`
