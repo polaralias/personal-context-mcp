@@ -9,7 +9,7 @@
 Reading rule:
 
 - this is an evidence document for current verified behavior during investigation
-- for current domain language and desired contract, start with `CONTEXT.md`, `docs/product-specs/resolver-spec.md`, and `docs/exec-plans/active/test-plan.md`
+- for current domain language and desired contract, start with `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, and `docs/exec-plans/active/test-plan.md`
 
 This report covers the follow-up investigations that can be completed without live third-party credentials:
 

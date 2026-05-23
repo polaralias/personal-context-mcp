@@ -30,7 +30,7 @@ This archive item exists as evidence that real integrations were exercised durin
 It is not the active contract source. For current repository truth, use:
 
 - `README.md`
-- `CONTEXT.md`
+- `GLOSSARY.md`
 - `docs/product-specs/resolver-spec.md`
 - `docs/tool-reference.md`
 - `docs/exec-plans/active/test-plan.md`

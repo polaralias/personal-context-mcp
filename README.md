@@ -30,7 +30,7 @@ Optional follow-on refactor:
 
 ## Start here
 
-- `CONTEXT.md`
+- `GLOSSARY.md`
 - `ARCHITECTURE.md`
 - `AGENTS.md`
 - `docs/PLANS.md`
@@ -39,7 +39,7 @@ Optional follow-on refactor:
 
 For repair work:
 
-- use `CONTEXT.md` for domain language
+- use `GLOSSARY.md` for domain language
 - use `docs/product-specs/resolver-spec.md` for the active resolver contract
 - use `docs/exec-plans/active/test-plan.md` for the current harness scope and remaining gaps
 - use evidence docs to verify current behavior, not to redefine the intended product contract silently

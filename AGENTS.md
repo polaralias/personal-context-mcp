@@ -36,7 +36,7 @@ Do not begin broad refactors until:
 For a light prompt such as `follow AGENTS.md and use tdd`, start in this order:
 
 1. `README.md`
-2. `CONTEXT.md`
+2. `GLOSSARY.md`
 3. `docs/product-specs/resolver-spec.md`
 4. `docs/tool-reference.md`
 5. `docs/exec-plans/active/test-plan.md`
@@ -48,7 +48,7 @@ Use evidence docs after that when you need proof of current behavior or the exac
 
 When the prompt says `use tdd`:
 
-- use the vocabulary in `CONTEXT.md`
+- use the vocabulary in `GLOSSARY.md`
 - treat `docs/product-specs/resolver-spec.md` and `docs/exec-plans/active/test-plan.md` as the default contract source
 - start with one small failing test from the highest-priority unresolved behavior
 - prefer Track A resolver tests first, then Track C tool-contract tests, unless the task is explicitly about auth/runtime
@@ -57,7 +57,7 @@ When the prompt says `use tdd`:
 ## Primary docs
 
 - `README.md`
-- `CONTEXT.md`
+- `GLOSSARY.md`
 - `ARCHITECTURE.md`
 - `docs/SECURITY.md`
 - `docs/RELIABILITY.md`

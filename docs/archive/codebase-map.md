@@ -2,14 +2,14 @@
 
 > Historical evidence note:
 > This document records investigation-era understanding and may describe pre-repair behavior.
-> Prefer `README.md`, `CONTEXT.md`, `docs/product-specs/resolver-spec.md`, `docs/tool-reference.md`, and the passing test suite for current repository truth.
+> Prefer `README.md`, `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, `docs/tool-reference.md`, and the passing test suite for current repository truth.
 
 ## Purpose hypothesis
 
 Reading rule:
 
 - this is a repository archaeology and current-shape document
-- for current domain language and desired repair contract, start with `CONTEXT.md` and `docs/product-specs/resolver-spec.md`
+- for current domain language and desired repair contract, start with `GLOSSARY.md` and `docs/product-specs/resolver-spec.md`
 
 This repository appears to be a standalone MCP server that exposes a "personal context" API to AI clients.
 

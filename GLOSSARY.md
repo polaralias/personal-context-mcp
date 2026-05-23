@@ -1,6 +1,6 @@
-# Personal Context
+# Glossary
 
-This context resolves agent-facing personal context from status, location, schedule, and holiday inputs.
+This glossary resolves agent-facing personal context from status, location, schedule, and holiday inputs.
 
 It exists to provide one coherent answer about effective personal state rather than exposing raw records as the product.
 

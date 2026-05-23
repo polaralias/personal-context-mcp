@@ -12,7 +12,7 @@
 
 If the prompt is only `follow AGENTS.md and use tdd`, use this sequence:
 
-1. `CONTEXT.md`
+1. `GLOSSARY.md`
 2. `docs/product-specs/resolver-spec.md`
 3. `docs/tool-reference.md`
 4. `docs/exec-plans/active/test-plan.md`

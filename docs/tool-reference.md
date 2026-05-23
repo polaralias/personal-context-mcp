@@ -2,7 +2,7 @@
 
 This file describes the current tested MCP tool surface.
 
-Use `CONTEXT.md` for canonical domain language and `docs/product-specs/resolver-spec.md` for resolver semantics.
+Use `GLOSSARY.md` for canonical domain language and `docs/product-specs/resolver-spec.md` for resolver semantics.
 
 ## Status tools
 

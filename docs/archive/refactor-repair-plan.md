@@ -2,7 +2,7 @@
 
 > Historical planning note:
 > This plan originated before later repair work and may reference pre-repair gaps that are now closed.
-> Cross-check active truth in `README.md`, `CONTEXT.md`, `docs/product-specs/resolver-spec.md`, `docs/tool-reference.md`, and `docs/exec-plans/active/test-plan.md`.
+> Cross-check active truth in `README.md`, `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, `docs/tool-reference.md`, and `docs/exec-plans/active/test-plan.md`.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ Use the sections below as historical reasoning for why the repairs were needed, 
 Current reading rule:
 
 - use this document for repair ordering and risk prioritization
-- use `CONTEXT.md`, `docs/product-specs/resolver-spec.md`, and `docs/exec-plans/active/test-plan.md` as the current contract harness
+- use `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, and `docs/exec-plans/active/test-plan.md` as the current contract harness
 
 Related investigation artifacts:
 
@@ -288,7 +288,7 @@ Repair goal:
 
 ### Available repository docs
 
-- `CONTEXT.md`
+- `GLOSSARY.md`
 - `README.md`
 - `docs/configuration.md`
 - `docs/tool-reference.md`
@@ -305,7 +305,7 @@ At present the desired contract is documented, but not yet enforced in code and 
 
 Use this hierarchy:
 
-1. `CONTEXT.md` for domain language
+1. `GLOSSARY.md` for domain language
 2. `docs/product-specs/resolver-spec.md` and `docs/tool-reference.md` for intended repaired behavior
 3. evidence docs for current verified behavior and known mismatches
 4. implementation for current mechanics
