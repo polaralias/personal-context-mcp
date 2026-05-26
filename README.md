@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Personal%20Context%20MCP.png" alt="Personal Context MCP banner" width="960" />
+</p>
+
 # Personal Context MCP
 
 Personal Context MCP is a FastMCP service that exposes personal status, location, schedule, holiday, and nearby-place context to agents.
