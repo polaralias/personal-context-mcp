@@ -47,6 +47,7 @@ DEFAULT_NEARBY_PLACE_FIELD_MASK = ",".join(
 VALID_NEARBY_RANK_PREFERENCES = {"POPULARITY", "DISTANCE"}
 VALID_LOCATION_SOURCES = {"manual", "homeassistant"}
 VALID_SCHEDULED_CONTEXT_SOURCES = {"manual", "automated"}
+VALID_API_KEY_MODES = {"required", "disabled"}
 
 
 def _runtime_env(*names: str, default: str = "") -> str:
@@ -1243,6 +1244,17 @@ class StatusResolver:
         }
 
 
+def _auth_mode() -> str:
+    mode = _runtime_env("API_KEY_MODE", "PERSONAL_API_KEY_MODE", default="required").strip().lower() or "required"
+    if mode not in VALID_API_KEY_MODES:
+        raise RuntimeError("Unsupported API_KEY_MODE value. Use 'required' or 'disabled'.")
+    return mode
+
+
+def _auth_is_disabled() -> bool:
+    return _auth_mode() == "disabled"
+
+
 def _load_api_keys() -> list[str]:
     if _auth_is_disabled():
         return []
@@ -1264,16 +1276,19 @@ def _load_api_keys() -> list[str]:
     return list(dict.fromkeys(keys))
 
 
-def _auth_is_disabled() -> bool:
-    return _runtime_env("API_KEY_MODE", "PERSONAL_API_KEY_MODE", default="").strip().lower() == "disabled"
+def _require_api_keys_configured(api_keys: list[str]) -> None:
+    if api_keys or _auth_is_disabled():
+        return
+    raise RuntimeError(
+        "MCP auth defaults to required. Configure PERSONAL_CONTEXT_MCP_API_KEY, MCP_API_KEY, or MCP_API_KEYS, "
+        "or set API_KEY_MODE=disabled or PERSONAL_API_KEY_MODE=disabled for intentional no-auth mode."
+    )
 
 
 def _health_auth_mode() -> str:
     if _auth_is_disabled():
         return "disabled"
-    if api_keys:
-        return "bearer-token"
-    return "unconfigured"
+    return "bearer-token"
 
 
 def _health_payload(database_path: str) -> dict[str, Any]:
@@ -1305,6 +1320,7 @@ home_assistant = HomeAssistantConnector(store, google_maps)
 source_manager = RuntimeSourceManager(store, google_maps, home_assistant)
 
 api_keys = _load_api_keys()
+_require_api_keys_configured(api_keys)
 auth = None if _auth_is_disabled() else StaticApiKeyVerifier(api_keys, base_url=_runtime_env("BASE_URL"))
 
 @lifespan

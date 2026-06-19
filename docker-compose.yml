@@ -11,6 +11,7 @@ services:
       MCP_HOST: 0.0.0.0
       MCP_PORT: "${PERSONAL_CONTEXT_MCP_PORT:-3003}"
       MCP_PATH: "${PERSONAL_CONTEXT_MCP_PATH:-/mcp}"
+      API_KEY_MODE: "${API_KEY_MODE:-required}"
     volumes:
       - ./state/data:/app/data
     ports:

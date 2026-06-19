@@ -15,12 +15,13 @@ Verified active behavior:
 | `PERSONAL_CONTEXT_MCP_API_KEY` | Primary bearer token accepted by `/mcp`. |
 | `MCP_API_KEY` | Additional single bearer token alias. |
 | `MCP_API_KEYS` | Comma-separated additional bearer tokens. |
-| `API_KEY_MODE` / `PERSONAL_API_KEY_MODE` | Set to `disabled` to disable bearer-token checks. |
+| `API_KEY_MODE` / `PERSONAL_API_KEY_MODE` | Defaults to `required`. Set to `disabled` only for intentional no-auth deployments. |
 
 Notes:
 
 - `/mcp` auth is live-validated.
 - `/health` remains public.
+- Missing MCP API keys now fail startup unless no-auth mode is explicitly enabled.
 
 ## Active runtime settings
 

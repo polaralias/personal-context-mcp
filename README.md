@@ -23,6 +23,7 @@ The service combines several context sources into a single MCP surface so downst
 
 - MCP: `http://127.0.0.1:3003/mcp`
 - Health: `http://127.0.0.1:3003/health`
+- MCP auth defaults to required; set `API_KEY_MODE=disabled` only for intentional no-auth use.
 
 ## Quick Start
 

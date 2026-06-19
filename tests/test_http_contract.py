@@ -89,22 +89,15 @@ def test_health_payload_reports_disabled_auth_mode_explicitly(load_server_module
     assert response.json()["mcpAuthMode"] == "disabled"
 
 
-def test_mcp_route_requires_auth_when_mode_is_not_disabled_even_without_keys(
-    load_server_module,
-):
-    server_module = load_server_module(disable_auth=False)
-    app = server_module.mcp.http_app(path="/mcp", transport="streamable-http")
+def test_server_import_requires_explicit_api_key_or_disabled_mode(load_server_module):
+    import pytest
 
-    with TestClient(app) as client:
-        response = client.post(
-            "/mcp",
-            headers={"Content-Type": "application/json"},
-            json={},
-        )
-        health = client.get("/health")
+    with pytest.raises(RuntimeError) as excinfo:
+        load_server_module(disable_auth=False)
 
-    assert response.status_code == 401
-    assert health.json()["mcpAuthMode"] == "unconfigured"
+    message = str(excinfo.value)
+    assert "PERSONAL_CONTEXT_MCP_API_KEY" in message
+    assert "API_KEY_MODE=disabled" in message
 
 
 def test_api_key_env_aliases_are_loaded_and_deduplicated(load_server_module):
