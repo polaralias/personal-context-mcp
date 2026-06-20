@@ -1332,7 +1332,7 @@ async def runtime_lifespan(_server):
         source_manager.stop()
 
 
-server = FastMCP("personal-context-mcp", auth=auth, lifespan=runtime_lifespan)
+server = FastMCP("Personal Context", auth=auth, lifespan=runtime_lifespan)
 mcp = server
 
 
