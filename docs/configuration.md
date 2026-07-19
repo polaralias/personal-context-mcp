@@ -8,7 +8,7 @@ This document describes configuration in three buckets:
 
 ## Active auth settings
 
-Verified active behavior:
+Verified active behaviour:
 
 | Variable | Purpose |
 | --- | --- |
@@ -24,7 +24,7 @@ Notes:
 
 ## Active runtime settings
 
-Verified active behavior:
+Verified active behaviour:
 
 | Variable | Purpose |
 | --- | --- |
@@ -54,7 +54,7 @@ These settings are active but their surrounding documentation or runtime contrac
 
 | Variable | Current concern |
 | --- | --- |
-| `DATABASE_URL` | Default path behavior is now `./data/mcp.db` relative to the current working directory; older docs may still describe the pre-repair path. |
+| `DATABASE_URL` | Default path behaviour is now `./data/mcp.db` relative to the current working directory; older docs may still describe the pre-repair path. |
 | `PERSONAL_CONTEXT_MCP_PORT` | Used by compose examples, not by core runtime resolution directly. |
 | `PERSONAL_CONTEXT_MCP_HOST_PORT` | Compose-only host publishing knob. |
 | `PERSONAL_CONTEXT_MCP_PATH` | Compose helper knob rather than the primary runtime path source. |
@@ -65,7 +65,7 @@ These names may still appear in older docs or examples, but they should not curr
 
 | Variable | Current state |
 | --- | --- |
-| `MASTER_KEY` / `PERSONAL_MASTER_KEY` | Not verified as active behavior. |
+| `MASTER_KEY` / `PERSONAL_MASTER_KEY` | Not verified as active behaviour. |
 | `CODE_TTL_SECONDS` / `PERSONAL_CODE_TTL_SECONDS` | Not part of the active public contract. |
 | `TOKEN_TTL_SECONDS` / `PERSONAL_TOKEN_TTL_SECONDS` | Not part of the active public contract. |
 | `API_KEY_ISSUE_RATELIMIT` / `PERSONAL_API_KEY_ISSUE_RATELIMIT` | Not verified as enforced. |

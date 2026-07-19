@@ -6,11 +6,11 @@ The product is a context resolver, not an event dump.
 
 ## Belief 2
 
-A small service with explicit contracts is better than a feature-rich service with ambiguous behavior.
+A small service with explicit contracts is better than a feature-rich service with ambiguous behaviour.
 
 ## Belief 3
 
-Public docs should describe tested behavior, not optimistic intent.
+Public docs should describe tested behaviour, not optimistic intent.
 
 ## Belief 4
 

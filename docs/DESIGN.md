@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository should evolve toward a service that is:
+This repository should evolve towards a service that is:
 
 - explicit about contract
 - narrow in scope

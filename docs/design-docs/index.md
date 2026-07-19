@@ -2,7 +2,7 @@
 
 ## Purpose
 
-These documents define the desired system behavior and engineering posture.
+These documents define the desired system behaviour and engineering posture.
 
 ## Documents
 

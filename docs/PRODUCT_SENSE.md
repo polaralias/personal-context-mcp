@@ -14,7 +14,7 @@ That changes the standard:
 
 - vague wording is a bug
 - unstable contracts are a bug
-- silent fallback behavior is a bug unless explicitly designed and documented
+- silent fallback behaviour is a bug unless explicitly designed and documented
 
 ## Product success
 

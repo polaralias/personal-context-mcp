@@ -56,7 +56,7 @@ Today, no single file is a full trustworthy spec.
 
 Use this hierarchy:
 
-1. verified live behavior and investigation docs
+1. verified live behaviour and investigation docs
 2. explicit product and design specs under `docs/`
 3. implementation
 

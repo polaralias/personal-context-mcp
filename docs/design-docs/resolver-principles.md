@@ -8,7 +8,7 @@ The resolver should produce one coherent effective context for a target date and
 
 - temporal correctness
 - explicit precedence
-- explainable fallback behavior
+- explainable fallback behaviour
 - stable treatment of expiry and staleness
 
 ## Current validated contract

@@ -7,4 +7,4 @@ Repository usage:
 
 Why it matters here:
 - tool contracts are part of the public API
-- auth and transport behavior should be documented independently from framework defaults when important
+- auth and transport behaviour should be documented independently from framework defaults when important
