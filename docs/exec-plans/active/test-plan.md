@@ -12,12 +12,12 @@ Implemented and passing today:
 
 - `59` total pytest cases
 - a pytest harness with in-memory store fixtures
-- resolver tests for temporal correctness, schedule precedence, scheduled location, location leakage prevention, TTL edge cases, scheduled-context validation, current-date live-location freshness boundaries, and scheduled-location normalization
-- tool contract tests for minimal effective-context shape, normalized live-location output shape, legacy-surface removal, and public provenance-boundary enforcement
-- store tests for schema initialization, schedule persistence, bounded history queries, and cleanup behavior
+- resolver tests for temporal correctness, schedule precedence, scheduled location, location leakage prevention, TTL edge cases, scheduled-context validation, current-date live-location freshness boundaries, and scheduled-location normalisation
+- tool contract tests for minimal effective-context shape, normalised live-location output shape, legacy-surface removal, and public provenance-boundary enforcement
+- store tests for schema initialisation, schedule persistence, bounded history queries, and cleanup behaviour
 - runtime tests for location-history limit validation, default database path resolution, and target-year holiday cache lookup
-- HTTP tests for public health access, precise health auth posture, safe-by-default auth enforcement, auth disable mode, and API-key alias normalization
-- mocked integration tests for Google reverse geocoding success, failure, and malformed payload handling, Nearby Search success and error surfacing, Home Assistant success and safe failure including invalid coordinates, and holiday cache write and fallback behavior
+- HTTP tests for public health access, precise health auth posture, safe-by-default auth enforcement, auth disable mode, and API-key alias normalisation
+- mocked integration tests for Google reverse geocoding success, failure, and malformed payload handling, Nearby Search success and error surfacing, Home Assistant success and safe failure including invalid coordinates, and holiday cache write and fallback behaviour
 
 ## Testing principles
 
@@ -40,7 +40,7 @@ Most core tests should run:
 ### 3. Separate unit and contract tests
 
 - unit tests prove local logic
-- contract tests prove public tool behavior
+- contract tests prove public tool behaviour
 
 ## Coverage map
 
@@ -118,13 +118,13 @@ Prove:
 - public scheduled-context writes reject non-manual provenance
 - scheduled location with missing coordinates is rejected
 - scheduled location with non-numeric coordinates is rejected
-- scheduled location input is normalized to `locationName`
+- scheduled location input is normalised to `locationName`
 
 ### Track B. Store tests
 
 Priority: `high`
 
-#### B1. Schema initialization tests
+#### B1. Schema initialisation tests
 
 Prove:
 
@@ -145,7 +145,7 @@ Prove:
 
 - upsert replaces existing patch for the same date
 - list ordering is stable
-- delete behavior is correct
+- delete behaviour is correct
 
 ### Track C. Tool contract tests
 
@@ -190,7 +190,7 @@ Prove:
 
 - valid schedule writes succeed
 - invalid date format fails
-- empty patch behavior matches the intended repaired contract
+- empty patch behaviour matches the intended repaired contract
 - `reason` may be returned or stored but does not affect scheduled-context precedence
 - scheduled-context list and read surfaces remain valid first-class planning interfaces
 
@@ -199,7 +199,7 @@ Prove:
 Prove:
 
 - valid region returns structured results
-- invalid region behavior is clear and stable
+- invalid region behaviour is clear and stable
 
 ### Track D. Auth and HTTP tests
 
@@ -227,7 +227,7 @@ Prove:
 - `PERSONAL_CONTEXT_MCP_API_KEY` works
 - `MCP_API_KEY` works
 - `MCP_API_KEYS` works
-- duplicate keys are normalized safely
+- duplicate keys are normalised safely
 
 ### Track E. Integration tests with mocks
 
@@ -247,7 +247,7 @@ Prove:
 
 - request validation works
 - HTTP errors surface clearly
-- result normalization returns the expected fields
+- result normalisation returns the expected fields
 
 #### E3. Home Assistant mock tests
 

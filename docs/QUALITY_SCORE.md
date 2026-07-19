@@ -14,7 +14,7 @@ Current repository quality: `8/10`
 ## Why it is not higher
 
 - the implementation remains concentrated in one large module
-- provenance and normalization rules are now correct, but broader structural cleanup is still pending
+- provenance and normalisation rules are now correct, but broader structural cleanup is still pending
 
 ## Conditions for raising the score
 
@@ -22,9 +22,9 @@ To reach `8/10`:
 
 - already achieved:
 - runtime/storage contract is explicit
-- resolver behavior is defined and tested
-- tool docs broadly match tested behavior
-- historical investigation artifacts are separated into `docs/archive/`
+- resolver behaviour is defined and tested
+- tool docs broadly match tested behaviour
+- historical investigation artefacts are separated into `docs/archive/`
 
 To reach `9/10`:
 

@@ -19,7 +19,7 @@ The following external surfaces were validated successfully at the time of the i
 
 - Home Assistant polling could authenticate, fetch location data, and store a usable location event
 - Google reverse geocoding could enrich a stored location name when valid credentials and enabled APIs were present
-- Google Nearby Search could return normalized place results and surfaced upstream failures clearly
+- Google Nearby Search could return normalised place results and surfaced upstream failures clearly
 - MCP bearer-token enforcement worked on the HTTP surface
 - GOV.UK holiday fetch returned usable holiday payloads
 

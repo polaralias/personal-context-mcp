@@ -24,15 +24,15 @@ Direct scheduled-context inspection is part of the product surface, not just an 
 - validated inputs
 - graceful degradation when integrations fail
 - deterministic outputs
-- operator-visible runtime behavior
+- operator-visible runtime behaviour
 - intent-shaped public writes rather than storage-shaped public writes
 
 ## Non-goals
 
 - end-user GUI
 - broad identity system
-- generalized workflow engine
+- generalised workflow engine
 
 ## Current mismatch to repair
 
-The current service persists more concepts than it reliably resolves. Repair work should narrow that gap until the product contract and runtime behavior match.
+The current service persists more concepts than it reliably resolves. Repair work should narrow that gap until the product contract and runtime behaviour match.

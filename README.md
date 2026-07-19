@@ -17,7 +17,7 @@ The service combines several context sources into a single MCP surface so downst
 - local persistence for context state
 - holiday lookup and caching
 - optional Home Assistant and Google reverse-geocoding integrations
-- normalized tool and payload behavior across context reads and writes
+- normalised tool and payload behaviour across context reads and writes
 
 ## Endpoints
 
@@ -41,4 +41,4 @@ Start with:
 - [docs/product-specs/index.md](docs/product-specs/index.md)
 - [docs/RELIABILITY.md](docs/RELIABILITY.md)
 
-For repository workflow and agent-focused context, read [AGENTS.md](AGENTS.md).
+For repository workflow and agent-focussed context, read [AGENTS.md](AGENTS.md).
