@@ -1,3 +1,18 @@
+---
+type: "Delivery Plan"
+title: "Plans"
+description: "Documents Plans for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - delivery-plan
+navigation:
+  role: supporting
+  order: 100
+---
 # Plans
 
 ## Active execution plans
@@ -29,3 +44,7 @@ This repository should not require a session-specific implementation brief befor
 - `docs/exec-plans/completed/contract-hardening.md`
 - `docs/exec-plans/completed/harness-engineering.md`
 - `docs/exec-plans/completed/repository-investigation.md`
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

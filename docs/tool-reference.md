@@ -1,3 +1,18 @@
+---
+type: "Reference"
+title: "Tool Reference"
+description: "Documents Tool Reference for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - reference
+navigation:
+  role: reference
+  order: 200
+---
 # Tool Reference
 
 This file describes the current tested MCP tool surface.
@@ -61,7 +76,7 @@ Returns the current effective location slice.
 
 Return shape:
 
-- `location` `null` or the normalized effective-location object described above
+- `location` `null` or the normalised effective-location object described above
 - `effectiveDate`
 
 ### `status_set_location`
@@ -83,7 +98,7 @@ Rules:
 
 Return shape:
 
-- `location` normalized effective-location object
+- `location` normalised effective-location object
 - `effectiveDate`
 
 ### `status_sync_homeassistant_location`
@@ -125,8 +140,8 @@ Parameters:
 
 Return shape:
 
-- `places` normalized nearby-place results
-- `search` normalized request summary
+- `places` normalised nearby-place results
+- `search` normalised request summary
 - `origin` chosen search origin and source
 - `defaultsApplied` boolean indicating whether default place types were used
 
@@ -160,7 +175,7 @@ Rules:
 - `reason` is explanatory only
 - public writes create manual scheduled context only
 - `automated` scheduled-context provenance is reserved for system-owned scheduling inputs
-- scheduled `location` is normalized to `latitude`, `longitude`, and `locationName`
+- scheduled `location` is normalised to `latitude`, `longitude`, and `locationName`
 - scheduled `location` participates in effective resolved context on the matching date
 
 ### `status_schedule_list`
@@ -193,3 +208,7 @@ Returns GOV.UK bank-holiday data for a region.
 Parameters:
 
 - `region` optional string, default `england-and-wales`
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

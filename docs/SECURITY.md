@@ -1,3 +1,18 @@
+---
+type: "Security Boundary"
+title: "Security"
+description: "Documents Security for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - security-boundary
+navigation:
+  role: foundational
+  order: 20
+---
 # Security
 
 ## Security principle
@@ -6,7 +21,7 @@ This service should use a simple, explicit auth model that is easy to reason abo
 
 ## Current verified auth model
 
-Validated behavior:
+Validated behaviour:
 
 - `/health` is unauthenticated
 - `/mcp` requires bearer-token auth whenever auth is not explicitly disabled
@@ -21,7 +36,7 @@ Validated behavior:
 ## Current contract edges
 
 - request rate limiting is not part of the current public contract
-- bearer-token auth remains intentionally simple and does not attempt broader identity or authorization features
+- bearer-token auth remains intentionally simple and does not attempt broader identity or authorisation features
 
 ## Current security contract
 
@@ -44,4 +59,8 @@ Never describe a control as present unless it is:
 
 - implemented
 - tested
-- documented as active behavior
+- documented as active behaviour
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

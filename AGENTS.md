@@ -20,16 +20,16 @@ Until the resolver contract and runtime contract are tested, prefer:
 
 Do not begin broad refactors until:
 
-- runtime behavior is documented accurately
-- resolver behavior is specified
+- runtime behaviour is documented accurately
+- resolver behaviour is specified
 - core tests exist
 
 ## Working rules
 
 - Preserve the distinction between `current verified behavior` and `desired end state`.
-- When updating docs, prefer outcome-focused language over code-shaped summaries.
-- When changing behavior, update the relevant spec and execution plan in the same change.
-- Keep investigation artifacts available until replacement specs and tests exist.
+- When updating docs, prefer outcome-focussed language over code-shaped summaries.
+- When changing behaviour, update the relevant spec and execution plan in the same change.
+- Keep investigation artefacts available until replacement specs and tests exist.
 
 ## Reading order for repair sessions
 
@@ -42,7 +42,7 @@ For a light prompt such as `follow AGENTS.md and use tdd`, start in this order:
 5. `docs/exec-plans/active/test-plan.md`
 6. the relevant active execution plan under `docs/PLANS.md`
 
-Use evidence docs after that when you need proof of current behavior or the exact shape of a known gap.
+Use evidence docs after that when you need proof of current behaviour or the exact shape of a known gap.
 
 ## TDD operating rule
 
@@ -50,7 +50,7 @@ When the prompt says `use tdd`:
 
 - use the vocabulary in `GLOSSARY.md`
 - treat `docs/product-specs/resolver-spec.md` and `docs/exec-plans/active/test-plan.md` as the default contract source
-- start with one small failing test from the highest-priority unresolved behavior
+- start with one small failing test from the highest-priority unresolved behaviour
 - prefer Track A resolver tests first, then Track C tool-contract tests, unless the task is explicitly about auth/runtime
 - if implementation, spec, and evidence disagree, preserve the disagreement explicitly and repair the spec/plan references in the same change
 

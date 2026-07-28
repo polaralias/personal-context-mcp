@@ -1,3 +1,18 @@
+---
+type: "Security Boundary"
+title: "Auth Principles"
+description: "Documents Auth Principles for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - security-boundary
+navigation:
+  role: foundational
+  order: 20
+---
 # Auth Principles
 
 ## Goal
@@ -31,3 +46,7 @@ The auth model should satisfy:
 - keep the simple auth model
 - remove or implement inactive security-adjacent knobs
 - document auth as a real product contract, not an implementation detail
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

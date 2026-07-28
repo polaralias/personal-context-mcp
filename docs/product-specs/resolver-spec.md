@@ -1,3 +1,18 @@
+---
+type: "Product Contract"
+title: "Resolver Specification"
+description: "Documents Resolver Specification for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - product-contract
+navigation:
+  role: foundational
+  order: 20
+---
 # Resolver Specification
 
 ## Purpose
@@ -20,13 +35,13 @@ This spec covers:
 - location resolution
 - schedule application
 - holiday and weekend influence
-- expiry and staleness behavior
+- expiry and staleness behaviour
 
 This spec does not define:
 
 - storage schema details
 - HTTP transport details
-- authentication behavior
+- authentication behaviour
 
 ## Inputs
 
@@ -64,7 +79,7 @@ Location shape rule:
 
 - `location` is either `null` or an object with `latitude`, `longitude`, and `locationName`
 - when a live location event wins, the returned location also includes `source` and `timestamp`
-- when scheduled location wins, the resolver normalizes the payload to the same `locationName` key and does not surface nested live-event provenance fields
+- when scheduled location wins, the resolver normalises the payload to the same `locationName` key and does not surface nested live-event provenance fields
 
 Calendar-fact rule:
 
@@ -181,13 +196,13 @@ Validation rule:
 - a scheduled-context entry must have a valid controlled source value
 - public scheduled-context writes may only create `manual` scheduled context
 - scheduled `location` input must include numeric `latitude` and `longitude`
-- scheduled `location` input is normalized to `latitude`, `longitude`, and `locationName`
+- scheduled `location` input is normalised to `latitude`, `longitude`, and `locationName`
 
 ### Work-status field
 
 If a scheduled-context entry contains `workStatus`, it should override lower-precedence work-status sources for that date.
 
-### Verified behavior
+### Verified behaviour
 
 - scheduled `workStatus` overrides weekend baseline
 
@@ -272,7 +287,7 @@ When multiple applicable location events exist:
 
 Scheduled location is a real part of effective context.
 
-### Verified behavior
+### Verified behaviour
 
 - storage supports scheduled location
 - resolver applies scheduled location on the matching date
@@ -288,7 +303,7 @@ Public write rule:
 - public `status_schedule_set` writes may only create `manual` scheduled context
 - `automated` provenance is reserved for system-owned scheduling inputs
 
-## Holiday behavior
+## Holiday behaviour
 
 Holiday checks should determine whether a target date is a bank holiday for the configured region.
 
@@ -300,7 +315,7 @@ Desired rule:
 
 - cache lookups are keyed by the target year being resolved
 
-## Expiry behavior
+## Expiry behaviour
 
 ### Work status
 
@@ -314,7 +329,7 @@ If a location event has `expires_at`:
 
 - it is applicable only before expiry
 
-## Staleness behavior
+## Staleness behaviour
 
 Location staleness is independent from TTL expiry.
 
@@ -336,9 +351,9 @@ The resolver does not need to:
 - backfill historical effective location for arbitrary dates unless explicitly specified
 - support multiple concurrent users
 
-## Current verified behavior snapshot
+## Current verified behaviour snapshot
 
-Verified current behavior:
+Verified current behaviour:
 
 - default work status is `off`
 - weekend and holiday baseline is `off`
@@ -352,9 +367,9 @@ Verified current behavior:
 - non-current dates resolve `location` from matching scheduled context or `null`
 - scheduled location participates in effective context on the matching date
 - effective-context reads surface `reason`, `workStatusProvenance`, and `locationProvenance`
-- effective location reads use the normalized `locationName` field
+- effective location reads use the normalised `locationName` field
 - public location writes reject non-manual provenance
-- public scheduled-context writes reject non-manual provenance and normalize scheduled location payloads
+- public scheduled-context writes reject non-manual provenance and normalise scheduled location payloads
 
 ## Repair acceptance criteria
 
@@ -362,10 +377,14 @@ The resolver contract should be considered repaired when:
 
 - temporal correctness is enforced for date-based status queries
 - precedence is explicit and tested
-- scheduled-location behavior is either implemented or removed from the product contract
-- expiry and staleness behavior are covered by automated tests
-- docs and implementation match on all public resolver-facing behavior
+- scheduled-location behaviour is either implemented or removed from the product contract
+- expiry and staleness behaviour are covered by automated tests
+- docs and implementation match on all public resolver-facing behaviour
 
 Current status:
 
 - the resolver contract is repaired and covered for the intended non-live harness surface
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

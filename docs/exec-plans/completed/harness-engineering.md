@@ -1,3 +1,18 @@
+---
+type: "Delivery Plan"
+title: "Harness Engineering"
+description: "Documents Harness Engineering for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - delivery-plan
+navigation:
+  role: supporting
+  order: 100
+---
 # Harness Engineering
 
 ## Outcome
@@ -26,3 +41,7 @@ Create a documentation and development harness that makes future repair work fas
 ## Follow-on dependency
 
 This plan should feed directly into contract hardening and test planning.
+
+## Repository knowledge
+
+- [Documentation map](../../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

@@ -1,3 +1,18 @@
+---
+type: "Glossary Concept"
+title: "Glossary"
+description: "Documents Glossary for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - glossary-concept
+navigation:
+  role: foundational
+  order: 20
+---
 # Glossary
 
 This glossary resolves agent-facing personal context from status, location, schedule, and holiday inputs.
@@ -88,20 +103,24 @@ _Avoid_: Holiday cache row, holiday event
 - empty or reason-only scheduled entries were ambiguous — resolved: **Scheduled Context** must contain `workStatus`, `location`, or both
 - planned vs actual work status naming was considered — resolved: do not add extra canonical terms; planned status lives inside **Scheduled Context**, actual status comes from **Work-Status Event**
 - stale location handling was ambiguous — resolved: stale **Location Event** is excluded from effective location, not returned with advisory status
-- bank-holiday override behavior was ambiguous — resolved: **Scheduled Context** may override a bank-holiday baseline
+- bank-holiday override behaviour was ambiguous — resolved: **Scheduled Context** may override a bank-holiday baseline
 - `reason` semantics were ambiguous — resolved: **Reason** is annotation only, visible to clients but never used in resolution
 - read visibility for `reason` was ambiguous — resolved: the winning **Reason** may be surfaced with **Effective Context**
 - location source vocabulary was ambiguous — resolved: **Location Source** is controlled, not free-form
 - allowed **Location Source** values were ambiguous — resolved: initial allowed values are `manual` and `homeassistant`
-- manual location writes were considered as possible admin-only behavior — resolved: manual **Location Event** creation remains first-class product capability
+- manual location writes were considered as possible admin-only behaviour — resolved: manual **Location Event** creation remains first-class product capability
 - scheduled provenance vocabulary was ambiguous — resolved: **Scheduled Context Source** is controlled, with initial values `manual` and `automated`
 - `computed` was considered as a scheduled source term — resolved: `computed` is not provenance language and should be reserved for resolved output semantics
 - explainability shape was ambiguous — resolved: **Effective Context** should include structured **Provenance** for winning sources
 - scheduled visibility was ambiguous — resolved: **Scheduled Context** remains a first-class queryable and manageable surface
 - provenance vocabulary was ambiguous — resolved: use controlled provenance values rather than free-form explanation categories
 - calendar fact visibility was ambiguous — resolved: weekend and bank holiday remain visible as separate facts even when a higher-precedence source wins
-- non-current date fallback behavior was ambiguous — resolved: baseline work status still resolves even when no **Scheduled Context** exists
+- non-current date fallback behaviour was ambiguous — resolved: baseline work status still resolves even when no **Scheduled Context** exists
 - historical location semantics were ambiguous — resolved: historical **Location Event** data stays in history surfaces and does not populate non-current **Effective Context** unless scheduled
 - empty-response semantics were ambiguous — resolved: **Effective Context** is a total function and always returns a minimal structured answer
 - public write semantics for work status were ambiguous — resolved: the end-state write contract is intent-shaped even though **Work-Status Event** remains a domain concept
 - baseline provenance granularity was ambiguous — resolved: keep `baseline` coarse and rely on separate weekend/bank-holiday facts for detail
+
+## Repository knowledge
+
+- [Documentation map](docs/knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

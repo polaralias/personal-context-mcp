@@ -1,3 +1,18 @@
+---
+type: "Product Contract"
+title: "Personal Context Service"
+description: "Documents Personal Context Service for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - product-contract
+navigation:
+  role: foundational
+  order: 20
+---
 # Personal Context Service
 
 ## Product outcome
@@ -24,15 +39,19 @@ Direct scheduled-context inspection is part of the product surface, not just an 
 - validated inputs
 - graceful degradation when integrations fail
 - deterministic outputs
-- operator-visible runtime behavior
+- operator-visible runtime behaviour
 - intent-shaped public writes rather than storage-shaped public writes
 
 ## Non-goals
 
 - end-user GUI
 - broad identity system
-- generalized workflow engine
+- generalised workflow engine
 
 ## Current mismatch to repair
 
-The current service persists more concepts than it reliably resolves. Repair work should narrow that gap until the product contract and runtime behavior match.
+The current service persists more concepts than it reliably resolves. Repair work should narrow that gap until the product contract and runtime behaviour match.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

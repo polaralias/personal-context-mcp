@@ -1,7 +1,22 @@
+---
+type: "Architecture Concept"
+title: "Codebase Map"
+description: "Documents Codebase Map for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - architecture-concept
+navigation:
+  role: foundational
+  order: 20
+---
 # Codebase Map
 
 > Historical evidence note:
-> This document records investigation-era understanding and may describe pre-repair behavior.
+> This document records investigation-era understanding and may describe pre-repair behaviour.
 > Prefer `README.md`, `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, `docs/tool-reference.md`, and the passing test suite for current repository truth.
 
 ## Purpose hypothesis
@@ -30,7 +45,7 @@ Working backwards from the tool surface, the core product is not a UI. It is a m
 - Persistence: current default runtime path resolves from `sqlite:///data/mcp.db`, while compose also mounts `./state/data` to `/app/data`; this contract is not yet aligned
 - Test suite: none present
 
-This is a small repository with a single dominant code surface, so the main risk is not sprawl. The main risk is hidden behavior and undocumented assumptions inside `server.py`.
+This is a small repository with a single dominant code surface, so the main risk is not sprawl. The main risk is hidden behaviour and undocumented assumptions inside `server.py`.
 
 ## Verified architecture
 
@@ -284,7 +299,7 @@ This repository is not chaos. It has a coherent product shape:
 
 But it is not yet first-class in the "publicly presentable" sense because the trust model is weak:
 
-- docs are mostly derived from code, not validated against behavior
+- docs are mostly derived from code, not validated against behaviour
 - there is no automated test suite
 - some tool contracts are broader than the logic that actually resolves state
 - some config/auth claims look like leftovers from an earlier architecture
@@ -308,10 +323,10 @@ That is a valid product. The gap is precision, verification, and contract clarit
 If this repository is being hardened in stages, the next research passes should be:
 
 1. Resolver correctness audit
-   Focus on date semantics, precedence rules, TTL behavior, and whether scheduled location should affect effective context.
+   Focus on date semantics, precedence rules, TTL behaviour, and whether scheduled location should affect effective context.
 
 2. Tool contract audit
-   Compare each MCP tool's documented promise against real behavior and produce a truth-table style compatibility matrix.
+   Compare each MCP tool's documented promise against real behaviour and produce a truth-table style compatibility matrix.
 
 3. Runtime/auth audit
    Separate active security controls from legacy/documentary config residue.
@@ -320,4 +335,8 @@ If this repository is being hardened in stages, the next research passes should 
    Exercise Home Assistant sync, Google reverse geocoding, nearby places, and holiday fetch with controlled fixtures.
 
 5. Test strategy
-   Define a minimal suite around resolver behavior first, because that is the product core.
+   Define a minimal suite around resolver behaviour first, because that is the product core.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

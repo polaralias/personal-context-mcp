@@ -1,3 +1,18 @@
+---
+type: "Historical Evidence"
+title: "Investigation Report"
+description: "Documents Investigation Report for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: evidence
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - historical-evidence
+navigation:
+  role: reference
+  order: 200
+---
 # Investigation Report
 
 > Historical evidence note:
@@ -8,7 +23,7 @@
 
 Reading rule:
 
-- this is an evidence document for current verified behavior during investigation
+- this is an evidence document for current verified behaviour during investigation
 - for current domain language and desired contract, start with `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, and `docs/exec-plans/active/test-plan.md`
 
 This report covers the follow-up investigations that can be completed without live third-party credentials:
@@ -19,7 +34,7 @@ This report covers the follow-up investigations that can be completed without li
 - deployment/config drift
 - testability and verification gaps
 
-No production code was changed during this pass. Only documentation artifacts were added.
+No production code was changed during this pass. Only documentation artefacts were added.
 
 ## Credentials requirement
 
@@ -37,7 +52,7 @@ Update after live validation:
 
 - Home Assistant live validation is now complete
 - Google live validation was attempted and reached the external APIs, but the supplied key was rejected as expired
-- MCP HTTP auth behavior was live-validated locally against a running server instance
+- MCP HTTP auth behaviour was live-validated locally against a running server instance
 - Google success-path validation is now complete after enabling the required APIs on a fresh key
 
 ## Method
@@ -46,7 +61,7 @@ Verification techniques used:
 
 - direct code review of `server.py`, `scripts/run_server.py`, and runtime manifests
 - import-time validation of the module
-- local execution of resolver and store behavior against `:memory:` SQLite databases
+- local execution of resolver and store behaviour against `:memory:` SQLite databases
 - targeted monkeypatching of module globals to exercise public tool functions without mutating a persistent local database
 
 ## Verified findings
@@ -65,7 +80,7 @@ This matters because the next hardening phase can be incremental rather than a r
 
 ### 2. Historical date resolution is not trustworthy
 
-Verified behavior:
+Verified behaviour:
 
 - querying a past date can still pick up a work-status event created later in time
 
@@ -85,7 +100,7 @@ Relevant code:
 
 ### 3. Scheduled location is persisted but not resolved
 
-Verified behavior:
+Verified behaviour:
 
 - `status_schedule_set()` accepts and stores a `location`
 - `StatusResolver.resolve()` ignores scheduled `location`
@@ -103,7 +118,7 @@ Relevant code:
 
 ### 4. Weekend overrides are allowed by schedule
 
-Verified behavior:
+Verified behaviour:
 
 - a scheduled `workStatus` overrides the built-in weekend `"off"` rule
 
@@ -118,7 +133,7 @@ Relevant code:
 
 ### 5. Temporary location TTL works, and stale filtering works
 
-Verified behavior:
+Verified behaviour:
 
 - a location with a short TTL disappears from resolved context once expired
 - resolved location is omitted when expired or stale
@@ -134,7 +149,7 @@ Relevant code:
 
 ### 6. `status_set_override` and `status_set_work` are not meaningfully distinct
 
-Verified behavior:
+Verified behaviour:
 
 - both write a new row into `work_status_events`
 - neither replaces an existing row
@@ -152,14 +167,14 @@ Relevant code:
 
 ### 7. Schedule entries can be empty no-ops
 
-Verified behavior:
+Verified behaviour:
 
 - `status_schedule_set(date=...)` with no `workStatus`, `location`, or `reason` stores an empty `{}` patch
 
 Impact:
 
-- empty schedule rows add state without changing behavior
-- this increases ambiguity when auditing repository data or debugging client behavior
+- empty schedule rows add state without changing behaviour
+- this increases ambiguity when auditing repository data or debugging client behaviour
 
 Relevant code:
 
@@ -168,7 +183,7 @@ Relevant code:
 
 ### 8. `status_get_location_history` accepts looser inputs than documented
 
-Verified behavior:
+Verified behaviour:
 
 - docs say `from` and `to` expect full ISO 8601 timestamps
 - implementation accepts bare dates like `2026-05-13`
@@ -176,7 +191,7 @@ Verified behavior:
 Impact:
 
 - the docs are stricter than the code
-- consumers may treat this as supported behavior even though it is undocumented
+- consumers may treat this as supported behaviour even though it is undocumented
 
 Relevant code:
 
@@ -185,7 +200,7 @@ Relevant code:
 
 ### 9. Negative history limits are accepted
 
-Verified behavior:
+Verified behaviour:
 
 - `status_get_location_history(limit=-1)` returns all inserted rows in the local validation case
 
@@ -206,7 +221,7 @@ Relevant code:
 
 ### 10. Default database-path claims are inaccurate
 
-Verified behavior:
+Verified behaviour:
 
 - `_resolve_database_path()` defaults to `sqlite:///data/mcp.db`
 - that resolves to `C:\\data\\mcp.db` on this Windows machine
@@ -228,10 +243,10 @@ Relevant code and config:
 
 ### 11. Several auth/rate-limit variables are documentary residue
 
-Verified behavior:
+Verified behaviour:
 
 - settings such as `MASTER_KEY`, code/token TTLs, and rate-limit knobs appear in docs and health payloads
-- no active behavior was found that enforces or uses them beyond exposing values in health output
+- no active behaviour was found that enforces or uses them beyond exposing values in health output
 
 Impact:
 
@@ -246,7 +261,7 @@ Relevant code:
 
 ### 12. Test suite is absent
 
-Verified behavior:
+Verified behaviour:
 
 - no automated tests were found in the repository
 
@@ -257,7 +272,7 @@ Impact:
 
 ### 13. Home Assistant integration is live and functioning
 
-Verified behavior:
+Verified behaviour:
 
 - the supplied Home Assistant settings produce a configured connector
 - polling `person.james` succeeds
@@ -276,7 +291,7 @@ Impact:
 
 ### 14. Google integration code path is live, but the supplied key is expired
 
-Verified behavior:
+Verified behaviour:
 
 - reverse geocoding reaches Google and fails with an expired-key error
 - Nearby Search reaches Google Places and fails with an expired-key error
@@ -287,7 +302,7 @@ Impact:
 
 - the Google request path and error handling are real
 - successful enrichment remains unverified until a valid key is supplied
-- current behavior on Google failure is serviceable and non-fatal for location writes
+- current behaviour on Google failure is serviceable and non-fatal for location writes
 
 Update after second live key:
 
@@ -312,7 +327,7 @@ Final conclusion:
 
 ### 15. MCP auth is enforced on the live HTTP endpoint
 
-Verified behavior:
+Verified behaviour:
 
 - `GET /health` returns `200` without auth
 - `POST /mcp` without auth returns `401`
@@ -326,7 +341,7 @@ Impact:
 
 ### 16. Holiday live fetch works, but the cache model is conceptually odd rather than immediately broken
 
-Verified behavior:
+Verified behaviour:
 
 - live GOV.UK holiday fetch succeeds
 - returned region payload includes many years of events, not only the current year
@@ -360,7 +375,7 @@ Impact:
 
 These require credentials or network-dependent fixture work:
 
-- GOV.UK holiday API behavior across year boundaries if the upstream payload format changes
+- GOV.UK holiday API behaviour across year boundaries if the upstream payload format changes
 
 ## Recommended next hardening order
 
@@ -374,7 +389,11 @@ These require credentials or network-dependent fixture work:
    Narrow or document inputs and outputs to match the real implementation.
 
 4. Add resolver-first tests.
-   The first test suite should cover date precedence, TTLs, stale location, and schedule behavior.
+   The first test suite should cover date precedence, TTLs, stale location, and schedule behaviour.
 
 5. Only then validate integrations with live credentials.
    That avoids spending time verifying external APIs before the internal contract is stable.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

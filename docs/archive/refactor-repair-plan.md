@@ -1,3 +1,18 @@
+---
+type: "Historical Evidence"
+title: "Refactor And Repair Plan"
+description: "Documents Refactor And Repair Plan for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: evidence
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - historical-evidence
+navigation:
+  role: reference
+  order: 200
+---
 # Refactor And Repair Plan
 
 > Historical planning note:
@@ -8,10 +23,10 @@
 
 This document converts the repository investigation into an execution plan for repair and refactor work.
 
-It is intentionally grounded in verified behavior, not intent:
+It is intentionally grounded in verified behaviour, not intent:
 
 - documents are treated as claims
-- code is treated as implementation that may or may not honor those claims
+- code is treated as implementation that may or may not honour those claims
 - live integrations are treated as verified only where exercised directly
 
 This plan does **not** prescribe immediate rewriting. It defines the order in which the repository should be made trustworthy.
@@ -35,10 +50,10 @@ Use the sections below as historical reasoning for why the repairs were needed, 
 
 Current reading rule:
 
-- use this document for repair ordering and risk prioritization
+- use this document for repair ordering and risk prioritisation
 - use `GLOSSARY.md`, `docs/product-specs/resolver-spec.md`, and `docs/exec-plans/active/test-plan.md` as the current contract harness
 
-Related investigation artifacts:
+Related investigation artefacts:
 
 - `docs/codebase-map.md`
 - `docs/tool-contract-matrix.md`
@@ -82,13 +97,13 @@ Primary implementation:
 - `scheduled_status`
 - `bank_holidays_cache`
 
-### Resolver behavior
+### Resolver behaviour
 
 Verified:
 
 - effective work status is derived from stored work events, weekends, holidays, and schedule patches
 - effective location is derived from the latest non-expired, non-stale location event
-- location TTL behavior works
+- location TTL behaviour works
 - stale-location suppression works
 - scheduled `workStatus` overrides weekend defaults
 
@@ -102,7 +117,7 @@ Verified:
 
 - the server exports 14 tools
 - the tool inventory documented in `docs/tool-reference.md` matches the actual count
-- tool-layer behavior was locally exercised for status, schedule, location history, HA sync, and Google enrichment
+- tool-layer behaviour was locally exercised for status, schedule, location history, HA sync, and Google enrichment
 
 ### Home Assistant integration
 
@@ -184,7 +199,7 @@ Validated issue:
 
 Impact:
 
-- local and container persistence behavior is not clearly trustworthy
+- local and container persistence behaviour is not clearly trustworthy
 - operators may think data is durable when it is not in the path they expect
 
 Repair goal:
@@ -220,7 +235,7 @@ Validated issue:
 Impact:
 
 - repository state can contain no-op schedule entries
-- debugging schedule behavior becomes noisier
+- debugging schedule behaviour becomes noisier
 
 Repair goal:
 
@@ -246,7 +261,7 @@ Repair goal:
 Validated issue:
 
 - health output reports code TTLs, token TTLs, issue limits, and MCP rate-limit values
-- no corresponding enforcement behavior was found
+- no corresponding enforcement behaviour was found
 
 Impact:
 
@@ -267,7 +282,7 @@ Validated issue:
 
 Repair goal:
 
-- either document the looser behavior or validate more strictly
+- either document the looser behaviour or validate more strictly
 
 #### 9. Holiday cache model is awkward
 
@@ -282,7 +297,7 @@ Impact:
 
 Repair goal:
 
-- key cache behavior to explicit data semantics rather than today’s upstream accident
+- key cache behaviour to explicit data semantics rather than today’s upstream accident
 
 ## 3. Current Specs And Docs
 
@@ -306,8 +321,8 @@ At present the desired contract is documented, but not yet enforced in code and 
 Use this hierarchy:
 
 1. `GLOSSARY.md` for domain language
-2. `docs/product-specs/resolver-spec.md` and `docs/tool-reference.md` for intended repaired behavior
-3. evidence docs for current verified behavior and known mismatches
+2. `docs/product-specs/resolver-spec.md` and `docs/tool-reference.md` for intended repaired behaviour
+3. evidence docs for current verified behaviour and known mismatches
 4. implementation for current mechanics
 
 ### Where the current docs are wrong or invalidated
@@ -318,14 +333,14 @@ Invalidated or misleading points:
 
 - the persistence claim under `./state/data` is not true for direct local default runs
 - the compose persistence story is not clearly aligned with the runtime DB path
-- "keeps existing location, schedule, retention, and integration behaviors intact" is vague and hides known contract issues
+- "keeps existing location, schedule, retention, and integration behaviours intact" is vague and hides known contract issues
 
 #### Configuration reference
 
 Invalidated or weak points:
 
 - several documented knobs appear to be documentary residue rather than live controls
-- `MASTER_KEY`, code/token TTLs, and rate-limit settings are not verified as active behavior
+- `MASTER_KEY`, code/token TTLs, and rate-limit settings are not verified as active behaviour
 
 #### Tool reference
 
@@ -341,7 +356,7 @@ Invalidated or incomplete points:
 Phase 1:
 
 - update README storage/runtime claims
-- mark current tool docs as behavior-based rather than intent-based
+- mark current tool docs as behaviour-based rather than intent-based
 - remove or annotate inactive config knobs
 
 Phase 2:
@@ -388,13 +403,13 @@ Priority 1:
 - resolver precedence tests
 - temporal correctness tests for historical and future dates
 - location TTL and stale-window tests
-- schedule behavior tests
+- schedule behaviour tests
 
 Priority 2:
 
 - store-layer query tests
 - tool-layer contract tests for validation and return shapes
-- auth behavior tests for `/mcp` versus `/health`
+- auth behaviour tests for `/mcp` versus `/health`
 
 Priority 3:
 
@@ -414,9 +429,9 @@ Strengths:
 
 Weaknesses:
 
-- key behavior is concentrated in one large file
+- key behaviour is concentrated in one large file
 - there is no enforced contract layer between storage, resolver, and tool surface
-- docs are partially derived from code but not verified against behavior
+- docs are partially derived from code but not verified against behaviour
 - operational claims exceed implemented controls in some areas
 
 Assessment:
@@ -440,7 +455,7 @@ Weaknesses:
 - no mock integration harness
 - no seed data or scenario library
 - compose/network assumptions are under-documented
-- default DB path behavior is confusing
+- default DB path behaviour is confusing
 
 Assessment:
 
@@ -453,8 +468,8 @@ For a public portfolio repository, the current harness quality is below the bar 
 
 - claims are ahead of verified contracts
 - no automated tests support the public API
-- storage and deployment behavior are not crisp
-- docs do not clearly separate implemented behavior from intended behavior
+- storage and deployment behaviour are not crisp
+- docs do not clearly separate implemented behaviour from intended behaviour
 
 ## 6. Repair And Refactor Sequence
 
@@ -466,7 +481,7 @@ Deliverables:
 
 - keep the investigation docs as baseline truth
 - do not expand features yet
-- use current verified behavior as the change-control reference
+- use current verified behaviour as the change-control reference
 
 ### Phase 1. Repair the contract before structure
 
@@ -506,15 +521,15 @@ Gate:
 Goals:
 
 - correct temporal status resolution
-- implement scheduled-location behavior according to the product contract
+- implement scheduled-location behaviour according to the product contract
 - validate inputs consistently
 - clean up inactive config residue
-- align DB path behavior across local and container execution
+- align DB path behaviour across local and container execution
 
 Deliverables:
 
-- repaired behavior with tests
-- docs updated from passing behavior
+- repaired behaviour with tests
+- docs updated from passing behaviour
 
 ### Phase 4. Structural refactor
 
@@ -523,7 +538,7 @@ Only after the contract is tested and the functional gaps are repaired:
 - split `server.py` by responsibility
 - separate storage, resolver, integrations, and tool registration
 - reduce runtime global state
-- improve configuration modeling
+- improve configuration modelling
 
 ### Phase 5. Public hardening
 
@@ -546,16 +561,20 @@ If work begins from this plan, the next concrete tasks should be:
 1. Translate the resolver specification into the first failing resolver tests, starting with temporal correctness and scheduled-location expectations.
 2. Add the minimal formal test harness needed to run Track A and Track C work locally.
 3. Repair the storage/runtime contract in code and docs so operators are not misled before broader changes begin.
-4. Remove or retire legacy surface that conflicts with the end-state contract only after tests protect the replacement behavior.
+4. Remove or retire legacy surface that conflicts with the end-state contract only after tests protect the replacement behaviour.
 
 ## 8. Definition Of “Ready To Refactor”
 
 This repository should be considered ready for structural refactoring only when:
 
-- storage/runtime behavior is documented accurately
+- storage/runtime behaviour is documented accurately
 - resolver semantics are specified explicitly
 - automated tests exist for resolver and key tools
-- public docs reflect tested behavior rather than assumptions
+- public docs reflect tested behaviour rather than assumptions
 - the highest-risk contract issues are repaired or intentionally narrowed
 
 Until then, the correct mode is targeted repair, not open-ended refactor.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

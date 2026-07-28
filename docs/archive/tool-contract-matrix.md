@@ -1,12 +1,27 @@
+---
+type: "Product Contract"
+title: "Tool Contract Matrix"
+description: "Documents Tool Contract Matrix for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - product-contract
+navigation:
+  role: foundational
+  order: 20
+---
 # Tool Contract Matrix
 
 Reading rule:
 
-- this matrix captures current verified tool behavior and contract drift
+- this matrix captures current verified tool behaviour and contract drift
 - use `docs/tool-reference.md` for the current human-readable contract summary
 - use `docs/product-specs/resolver-spec.md` when end-state product intent matters
 
-This matrix compares the current public tool surface against observed behavior from `server.py` and local execution.
+This matrix compares the current public tool surface against observed behaviour from `server.py` and local execution.
 
 Legend:
 
@@ -54,7 +69,7 @@ Legend:
   - returns current effective work status and date
 - Gap:
   - "replace" is inaccurate
-  - behavior overlaps heavily with `status_set_override`
+  - behaviour overlaps heavily with `status_set_override`
 
 ## Location tools
 
@@ -93,7 +108,7 @@ Legend:
   - only enriches the latest stored location record that has no name
   - returns whether an update occurred
 - Gap:
-  - wording suggests broader enrichment than the actual "fill missing name" behavior
+  - wording suggests broader enrichment than the actual "fill missing name" behaviour
 
 ### `places_nearby`
 
@@ -104,7 +119,7 @@ Legend:
   - validates rank preference and explicit lat/lon pairing
   - default nearby types are applied when `includedTypes` is omitted
 - Gap:
-  - live Google Places behavior remains unverified without credentials
+  - live Google Places behaviour remains unverified without credentials
 
 ### `status_get_location_history`
 
@@ -159,4 +174,8 @@ Legend:
   - falls back to cached data on some fetch failures
 - Gap:
   - internal cache keying uses the current year, not a requested target year context
-  - live network behavior was not fully exercised in this pass
+  - live network behaviour was not fully exercised in this pass
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-These documents define the intended product behavior, not just the current implementation.
+These documents define the intended product behaviour, not just the current implementation.
 
 ## Specs
 
