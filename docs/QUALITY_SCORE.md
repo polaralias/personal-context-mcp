@@ -1,3 +1,18 @@
+---
+type: "Quality Standard"
+title: "Quality Score"
+description: "Documents Quality Score for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - quality-standard
+navigation:
+  role: supporting
+  order: 100
+---
 # Quality Score
 
 ## Current assessment
@@ -31,3 +46,7 @@ To reach `9/10`:
 - refactor into separated modules
 - continue pruning inactive config residue and stale historical narratives
 - provide clean public setup and usage guidance
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

@@ -1,3 +1,18 @@
+---
+type: "Glossary Concept"
+title: "Glossary"
+description: "Documents Glossary for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - glossary-concept
+navigation:
+  role: foundational
+  order: 20
+---
 # Glossary
 
 This glossary resolves agent-facing personal context from status, location, schedule, and holiday inputs.
@@ -105,3 +120,7 @@ _Avoid_: Holiday cache row, holiday event
 - empty-response semantics were ambiguous — resolved: **Effective Context** is a total function and always returns a minimal structured answer
 - public write semantics for work status were ambiguous — resolved: the end-state write contract is intent-shaped even though **Work-Status Event** remains a domain concept
 - baseline provenance granularity was ambiguous — resolved: keep `baseline` coarse and rely on separate weekend/bank-holiday facts for detail
+
+## Repository knowledge
+
+- [Documentation map](docs/knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

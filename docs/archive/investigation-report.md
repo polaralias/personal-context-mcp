@@ -1,3 +1,18 @@
+---
+type: "Historical Evidence"
+title: "Investigation Report"
+description: "Documents Investigation Report for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: evidence
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - historical-evidence
+navigation:
+  role: reference
+  order: 200
+---
 # Investigation Report
 
 > Historical evidence note:
@@ -378,3 +393,7 @@ These require credentials or network-dependent fixture work:
 
 5. Only then validate integrations with live credentials.
    That avoids spending time verifying external APIs before the internal contract is stable.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

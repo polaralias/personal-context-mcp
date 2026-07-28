@@ -1,3 +1,18 @@
+---
+type: "Delivery Plan"
+title: "Test Plan"
+description: "Documents Test Plan for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - delivery-plan
+navigation:
+  role: supporting
+  order: 100
+---
 # Test Plan
 
 ## Purpose
@@ -307,3 +322,7 @@ Current status:
 
 - this threshold has been met for the core resolver, tool, runtime, and auth contract surfaces
 - no remaining tracked coverage work blocks safe targeted refactor work
+
+## Repository knowledge
+
+- [Documentation map](../../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

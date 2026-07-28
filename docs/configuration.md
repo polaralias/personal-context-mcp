@@ -1,3 +1,18 @@
+---
+type: "Reference"
+title: "Configuration Reference"
+description: "Documents Configuration Reference for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - reference
+navigation:
+  role: reference
+  order: 200
+---
 # Configuration Reference
 
 This document describes configuration in three buckets:
@@ -88,3 +103,7 @@ For the current repair direction, see:
 - `docs/SECURITY.md`
 - `docs/RELIABILITY.md`
 - `docs/archive/investigation-report.md`
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

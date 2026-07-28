@@ -1,3 +1,18 @@
+---
+type: "Design Concept"
+title: "Resolver Principles"
+description: "Documents Resolver Principles for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - design-concept
+navigation:
+  role: supporting
+  order: 100
+---
 # Resolver Principles
 
 ## Goal
@@ -26,3 +41,7 @@ For any query date, the service should be able to explain:
 - which location source won
 - which scheduled-context entry was applied
 - whether holiday or weekend logic was involved
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

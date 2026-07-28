@@ -1,3 +1,18 @@
+---
+type: "Security Boundary"
+title: "Security"
+description: "Documents Security for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - security-boundary
+navigation:
+  role: foundational
+  order: 20
+---
 # Security
 
 ## Security principle
@@ -45,3 +60,7 @@ Never describe a control as present unless it is:
 - implemented
 - tested
 - documented as active behaviour
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

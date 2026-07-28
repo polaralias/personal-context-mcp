@@ -1,3 +1,18 @@
+---
+type: "Product Contract"
+title: "Tool Contract Matrix"
+description: "Documents Tool Contract Matrix for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - product-contract
+navigation:
+  role: foundational
+  order: 20
+---
 # Tool Contract Matrix
 
 Reading rule:
@@ -160,3 +175,7 @@ Legend:
 - Gap:
   - internal cache keying uses the current year, not a requested target year context
   - live network behaviour was not fully exercised in this pass
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

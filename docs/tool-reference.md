@@ -1,3 +1,18 @@
+---
+type: "Reference"
+title: "Tool Reference"
+description: "Documents Tool Reference for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - reference
+navigation:
+  role: reference
+  order: 200
+---
 # Tool Reference
 
 This file describes the current tested MCP tool surface.
@@ -193,3 +208,7 @@ Returns GOV.UK bank-holiday data for a region.
 Parameters:
 
 - `region` optional string, default `england-and-wales`
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

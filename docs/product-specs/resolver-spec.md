@@ -1,3 +1,18 @@
+---
+type: "Product Contract"
+title: "Resolver Specification"
+description: "Documents Resolver Specification for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - product-contract
+navigation:
+  role: foundational
+  order: 20
+---
 # Resolver Specification
 
 ## Purpose
@@ -369,3 +384,7 @@ The resolver contract should be considered repaired when:
 Current status:
 
 - the resolver contract is repaired and covered for the intended non-live harness surface
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

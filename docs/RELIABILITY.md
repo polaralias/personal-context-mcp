@@ -1,3 +1,18 @@
+---
+type: "Reliability Contract"
+title: "Reliability"
+description: "Documents Reliability for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - reliability-contract
+navigation:
+  role: supporting
+  order: 100
+---
 # Reliability
 
 ## Reliability goal
@@ -29,3 +44,7 @@ The service should produce deterministic, explainable context from a mix of:
 - integration failures degrade clearly, not silently
 - storage behaviour is predictable in every supported runtime mode
 - reliability claims are backed by automated tests
+
+## Repository knowledge
+
+- [Documentation map](knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

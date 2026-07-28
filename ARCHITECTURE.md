@@ -1,3 +1,18 @@
+---
+type: "Architecture Concept"
+title: "Architecture"
+description: "Documents Architecture for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - architecture-concept
+navigation:
+  role: foundational
+  order: 20
+---
 # Architecture
 
 ## System shape
@@ -61,3 +76,7 @@ Use this hierarchy:
 3. implementation
 
 When docs and implementation conflict, treat the conflict as work to resolve, not as a reason to assume either side is correct.
+
+## Repository knowledge
+
+- [Documentation map](docs/knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

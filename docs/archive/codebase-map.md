@@ -1,3 +1,18 @@
+---
+type: "Architecture Concept"
+title: "Codebase Map"
+description: "Documents Codebase Map for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - architecture-concept
+navigation:
+  role: foundational
+  order: 20
+---
 # Codebase Map
 
 > Historical evidence note:
@@ -321,3 +336,7 @@ If this repository is being hardened in stages, the next research passes should 
 
 5. Test strategy
    Define a minimal suite around resolver behaviour first, because that is the product core.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

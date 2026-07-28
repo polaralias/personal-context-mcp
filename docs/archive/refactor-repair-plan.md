@@ -1,3 +1,18 @@
+---
+type: "Historical Evidence"
+title: "Refactor And Repair Plan"
+description: "Documents Refactor And Repair Plan for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: evidence
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - historical-evidence
+navigation:
+  role: reference
+  order: 200
+---
 # Refactor And Repair Plan
 
 > Historical planning note:
@@ -559,3 +574,7 @@ This repository should be considered ready for structural refactoring only when:
 - the highest-risk contract issues are repaired or intentionally narrowed
 
 Until then, the correct mode is targeted repair, not open-ended refactor.
+
+## Repository knowledge
+
+- [Documentation map](../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.

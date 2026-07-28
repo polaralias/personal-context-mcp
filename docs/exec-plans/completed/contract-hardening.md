@@ -1,3 +1,18 @@
+---
+type: "Product Contract"
+title: "Contract Hardening"
+description: "Documents Contract Hardening for the personal-context-mcp repository."
+timestamp: 2026-07-28T21:55:36Z
+authority: canonical
+verification: untested
+owner: polaralias
+tags:
+  - personal-context-mcp
+  - product-contract
+navigation:
+  role: foundational
+  order: 20
+---
 # Contract Hardening
 
 ## Outcome
@@ -37,3 +52,7 @@ Completed in the repaired repository state:
 - specs exist
 - docs match implemented tested behaviour
 - the active test plan points to remaining gaps rather than missing first principles
+
+## Repository knowledge
+
+- [Documentation map](../../knowledge/documentation-map.md) — RKE-managed reading order and relationship hub.
