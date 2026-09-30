@@ -6,13 +6,16 @@ services:
     container_name: personal-context-mcp
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       MCP_HOST: 0.0.0.0
       MCP_PORT: "${PERSONAL_CONTEXT_MCP_PORT:-3003}"
       MCP_PATH: "${PERSONAL_CONTEXT_MCP_PATH:-/mcp}"
+      FASTMCP_HOME: /app/state/fastmcp
     volumes:
       - ./state/data:/app/data
+      - ./state/fastmcp:/app/state/fastmcp
     ports:
       - "${PERSONAL_CONTEXT_MCP_HOST_PORT:-3003}:${PERSONAL_CONTEXT_MCP_PORT:-3003}"
     healthcheck:

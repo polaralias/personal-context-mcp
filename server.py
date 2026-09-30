@@ -17,6 +17,7 @@ from urllib.request import Request, urlopen
 
 from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, TokenVerifier
+from mcp_oauth import select_mcp_auth
 from fastmcp.server.lifespan import lifespan
 from pydantic import Field
 from starlette.responses import JSONResponse
@@ -1305,7 +1306,7 @@ home_assistant = HomeAssistantConnector(store, google_maps)
 source_manager = RuntimeSourceManager(store, google_maps, home_assistant)
 
 api_keys = _load_api_keys()
-auth = None if _auth_is_disabled() else StaticApiKeyVerifier(api_keys, base_url=_runtime_env("BASE_URL"))
+auth = select_mcp_auth("personal-context-mcp", StaticApiKeyVerifier, api_keys, _runtime_env("BASE_URL"))
 
 @lifespan
 async def runtime_lifespan(_server):
