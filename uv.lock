@@ -664,12 +664,14 @@ dependencies = [
 
 [package.optional-dependencies]
 test = [
+    { name = "httpx" },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastmcp", specifier = ">=3.1.0" },
+    { name = "httpx", marker = "extra == 'test'", specifier = ">=0.28,<1" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.3.4" },
 ]
 provides-extras = ["test"]
